@@ -6,12 +6,14 @@ import "testing"
 
 func TestLoad(t *testing.T) {
 	tests := []struct {
-		name      string
-		env       map[string]string
-		wantErr   bool
-		wantDB    string
-		wantName  string
-		wantToken string
+		name        string
+		env         map[string]string
+		wantErr     bool
+		wantDB      string
+		wantName    string
+		wantToken   string
+		wantWingman string
+		wantAddr    string
 	}{
 		{
 			name: "valid",
@@ -19,15 +21,25 @@ func TestLoad(t *testing.T) {
 				"BEACON_DATABASE_URL":  "postgres://u:p@h:5432/db",
 				"BEACON_MACHINE_NAME":  "test-mac",
 				"BEACON_MACHINE_TOKEN": "secret",
+				"BEACON_WINGMAN_TOKEN": "wtok",
+				"BEACON_MCP_ADDR":      ":9000",
 			},
-			wantDB:    "postgres://u:p@h:5432/db",
-			wantName:  "test-mac",
-			wantToken: "secret",
+			wantDB:      "postgres://u:p@h:5432/db",
+			wantName:    "test-mac",
+			wantToken:   "secret",
+			wantWingman: "wtok",
+			wantAddr:    ":9000",
 		},
 		{
 			name:    "missing database url",
 			env:     map[string]string{"BEACON_MACHINE_NAME": "x", "BEACON_MACHINE_TOKEN": "y"},
 			wantErr: true,
+		},
+		{
+			name:     "default mcp addr",
+			env:      map[string]string{"BEACON_DATABASE_URL": "postgres://u:p@h:5432/db"},
+			wantDB:   "postgres://u:p@h:5432/db",
+			wantAddr: ":8080",
 		},
 	}
 
@@ -54,6 +66,12 @@ func TestLoad(t *testing.T) {
 			}
 			if got.MachineToken != tt.wantToken {
 				t.Errorf("MachineToken = %q, want %q", got.MachineToken, tt.wantToken)
+			}
+			if got.WingmanToken != tt.wantWingman {
+				t.Errorf("WingmanToken = %q, want %q", got.WingmanToken, tt.wantWingman)
+			}
+			if got.MCPAddr != tt.wantAddr {
+				t.Errorf("MCPAddr = %q, want %q", got.MCPAddr, tt.wantAddr)
 			}
 		})
 	}
