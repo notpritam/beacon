@@ -6,10 +6,12 @@ import "testing"
 
 func TestLoad(t *testing.T) {
 	tests := []struct {
-		name    string
-		env     map[string]string
-		wantErr bool
-		wantDB  string
+		name      string
+		env       map[string]string
+		wantErr   bool
+		wantDB    string
+		wantName  string
+		wantToken string
 	}{
 		{
 			name: "valid",
@@ -18,7 +20,9 @@ func TestLoad(t *testing.T) {
 				"BEACON_MACHINE_NAME":  "test-mac",
 				"BEACON_MACHINE_TOKEN": "secret",
 			},
-			wantDB: "postgres://u:p@h:5432/db",
+			wantDB:    "postgres://u:p@h:5432/db",
+			wantName:  "test-mac",
+			wantToken: "secret",
 		},
 		{
 			name:    "missing database url",
@@ -44,6 +48,12 @@ func TestLoad(t *testing.T) {
 			}
 			if got.DatabaseURL != tt.wantDB {
 				t.Errorf("DatabaseURL = %q, want %q", got.DatabaseURL, tt.wantDB)
+			}
+			if got.MachineName != tt.wantName {
+				t.Errorf("MachineName = %q, want %q", got.MachineName, tt.wantName)
+			}
+			if got.MachineToken != tt.wantToken {
+				t.Errorf("MachineToken = %q, want %q", got.MachineToken, tt.wantToken)
 			}
 		})
 	}
