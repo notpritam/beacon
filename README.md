@@ -24,12 +24,12 @@ Full design and flow: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Status
 
-Phase 0b complete: the laptop agent (`cmd/agent`) now drains the queue — it registers
-the machine, polls for jobs, executes shell commands and file ops, reports results, and
-stops cleanly on SIGINT/SIGTERM. The local audit mirror and dual kill switch are wired in.
-The MCP server (`cmd/mcp`) is next (Phase 0c+).
-Roadmap (background jobs → dashboard → interactive computer-use → fleet)
-is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Phase 0c complete: the MCP server (`cmd/mcp`) is implemented and exposes all 7 tools
+over streamable HTTP with bearer auth. The laptop agent (`cmd/agent`) drains the queue
+— registers the machine, polls for jobs, executes shell commands and file ops, reports
+results, and stops cleanly on SIGINT/SIGTERM. The local audit mirror and dual kill
+switch are wired in. Roadmap (background jobs → dashboard → interactive computer-use
+→ fleet) is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Development
 
@@ -74,6 +74,19 @@ BEACON_DATABASE_URL=<db-url> BEACON_MACHINE_NAME=my-laptop BEACON_MACHINE_TOKEN=
 
 State files are written to `~/.beacon/`: `audit.log` (local append-only mirror) and
 `killswitch` (create/touch to hard-stop the agent without a signal).
+
+### MCP server (Phase 0c)
+
+```bash
+# serve Beacon's 7 tools over streamable HTTP at /mcp
+BEACON_DATABASE_URL=<db-url> BEACON_WINGMAN_TOKEN=<wingman-secret> go run ./cmd/mcp
+
+# optional: override the listen address (default :8080)
+BEACON_DATABASE_URL=<db-url> BEACON_WINGMAN_TOKEN=<wingman-secret> BEACON_MCP_ADDR=:9090 go run ./cmd/mcp
+```
+
+Wingman connects to `http://<host>:<port>/mcp` and must send
+`Authorization: Bearer <BEACON_WINGMAN_TOKEN>` on every request.
 
 ## License
 
