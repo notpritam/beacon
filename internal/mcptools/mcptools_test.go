@@ -68,7 +68,10 @@ func TestGetJob(t *testing.T) {
 	st := newToolsStore(t)
 	tools := New(st, Options{})
 	ctx := context.Background()
-	m, _ := st.RegisterMachine(ctx, t.Name(), "darwin", "h")
+	m, err := st.RegisterMachine(ctx, t.Name(), "darwin", "h")
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
 	j, err := st.EnqueueJob(ctx, m.ID, store.JobShell, json.RawMessage(`{"cmd":"echo hi"}`), 0, nil, "test")
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)

@@ -62,8 +62,10 @@ type MachineInfo struct {
 
 // JobOutcome is the result of enqueuing a job or fetching one.
 type JobOutcome struct {
-	JobID         string          `json:"job_id"`
-	Status        string          `json:"status"`
+	JobID  string `json:"job_id"`
+	Status string `json:"status"`
+	// MachineOnline is set by enqueueAndWait (it reflects online state at enqueue time).
+	// GetJob does not have machine context, so it always leaves this field false.
 	MachineOnline bool            `json:"machine_online"`
 	Result        json.RawMessage `json:"result,omitempty"`
 }
