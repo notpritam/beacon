@@ -51,8 +51,16 @@ func New(cfg Config) *Executor {
 // type). A shell command that completes with a non-zero exit code is NOT an
 // error — the exit code is carried in the result.
 func (e *Executor) Execute(ctx context.Context, job store.Job) (json.RawMessage, error) {
-	if job.Type == store.JobShell {
+	switch job.Type {
+	case store.JobShell:
 		return e.runShell(ctx, job.Payload)
+	case store.JobReadFile:
+		return e.readFile(job.Payload)
+	case store.JobWriteFile:
+		return e.writeFile(job.Payload)
+	case store.JobListDir:
+		return e.listDir(job.Payload)
+	default:
+		return nil, fmt.Errorf("executor: unsupported job type %q", job.Type)
 	}
-	return nil, fmt.Errorf("executor: unsupported job type %q", job.Type)
 }
