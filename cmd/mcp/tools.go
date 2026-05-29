@@ -77,4 +77,9 @@ func registerTools(s *mcp.Server, t *mcptools.Tools) {
 			out, err := t.GetJob(ctx, in.JobID)
 			return nil, out, err
 		})
+	mcp.AddTool(s, &mcp.Tool{Name: "screenshot", Description: "Capture the machine's screen; result has a base64-encoded JPEG."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in machineInput) (*mcp.CallToolResult, mcptools.JobOutcome, error) {
+			out, err := t.Screenshot(ctx, in.Machine)
+			return nil, out, err
+		})
 }

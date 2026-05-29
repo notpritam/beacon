@@ -1,5 +1,5 @@
 // ABOUTME: Executor runs a store.Job on the local machine and returns its JSON result.
-// ABOUTME: Dispatches by job type; shell/file ops are supported, screenshot/background deferred.
+// ABOUTME: Dispatches by job type; shell/file/screenshot are supported, background deferred.
 
 // Package executor performs the local side of a Beacon job: it runs shell
 // commands and file operations and returns a JSON result.
@@ -24,15 +24,22 @@ type Config struct {
 	MaxOutputBytes int
 	// MaxReadBytes caps the size of a file that read_file will return.
 	MaxReadBytes int64
+	// MaxScreenshotDim downscales a screenshot so its largest side is at most this
+	// many pixels (0 disables resizing).
+	MaxScreenshotDim int
+	// MaxScreenshotBytes caps the encoded screenshot size; larger captures error.
+	MaxScreenshotBytes int
 }
 
 // DefaultConfig returns sensible execution limits.
 func DefaultConfig() Config {
 	return Config{
-		DefaultTimeout: 60 * time.Second,
-		MaxTimeout:     5 * time.Minute,
-		MaxOutputBytes: 1 << 20,  // 1 MiB
-		MaxReadBytes:   10 << 20, // 10 MiB
+		DefaultTimeout:     60 * time.Second,
+		MaxTimeout:         5 * time.Minute,
+		MaxOutputBytes:     1 << 20,  // 1 MiB
+		MaxReadBytes:       10 << 20, // 10 MiB
+		MaxScreenshotDim:   1600,     // px, longest side
+		MaxScreenshotBytes: 8 << 20,  // 8 MiB
 	}
 }
 
@@ -60,6 +67,8 @@ func (e *Executor) Execute(ctx context.Context, job store.Job) (json.RawMessage,
 		return e.writeFile(job.Payload)
 	case store.JobListDir:
 		return e.listDir(job.Payload)
+	case store.JobScreenshot:
+		return e.screenshot(ctx)
 	default:
 		return nil, fmt.Errorf("executor: unsupported job type %q", job.Type)
 	}

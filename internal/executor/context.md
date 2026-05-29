@@ -14,7 +14,7 @@
 | `read_file` | `files.go` | supported |
 | `write_file` | `files.go` | supported |
 | `list_dir` | `files.go` | supported |
-| `screenshot` | — | deferred |
+| `screenshot` | `screenshot.go` | supported (macOS only) |
 | `background` | — | deferred |
 
 **Design / flow:**
@@ -35,6 +35,11 @@
   - `writeFile`: writes content with 0644 permissions; returns `writeResult{BytesWritten}`. Requires the parent directory to already exist (no `mkdir -p`) and fails otherwise.
   - `listDir`: reads directory entries via `os.ReadDir`; returns `listResult{Entries}` where each entry has `Name`, `IsDir`, and `Size`.
   - All three take only `payload` (no ctx) — file ops are fast and non-cancellable at the OS level.
+- Screenshot jobs (`JobScreenshot`) are handled by `screenshot` in `screenshot.go` (macOS only):
+  captures the desktop with `screencapture -x -t jpg`, best-effort downscales with `sips -Z
+  MaxScreenshotDim`, reads the bytes (capped at `MaxScreenshotBytes`), and returns
+  `screenshotResult{Format,Bytes,Base64}`. Requires macOS Screen Recording permission for the
+  process running the agent.
 - Unsupported job types return an explicit `fmt.Errorf` (not a panic).
 
 **Depends on:** `internal/store` (for `Job`, `JobType` constants). No database connection needed.

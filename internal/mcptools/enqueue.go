@@ -116,3 +116,13 @@ func (t *Tools) ListDir(ctx context.Context, machine, path string) (JobOutcome, 
 	}
 	return t.enqueueAndWait(ctx, m, store.JobListDir, payload)
 }
+
+// Screenshot enqueues a screenshot job for the machine and waits for the result
+// (a base64-encoded JPEG in the result).
+func (t *Tools) Screenshot(ctx context.Context, machine string) (JobOutcome, error) {
+	m, err := t.resolve(ctx, machine)
+	if err != nil {
+		return JobOutcome{}, err
+	}
+	return t.enqueueAndWait(ctx, m, store.JobScreenshot, json.RawMessage(`{}`))
+}

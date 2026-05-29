@@ -103,3 +103,26 @@ func TestReadFileEnqueuesCorrectPayload(t *testing.T) {
 		t.Errorf("path = %q, want /tmp/x", p.Path)
 	}
 }
+
+func TestScreenshotOfflineReturnsQueued(t *testing.T) {
+	st := newToolsStore(t)
+	tools := New(st, Options{})
+	ctx := context.Background()
+	if _, err := st.RegisterMachine(ctx, t.Name(), "darwin", "h"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	out, err := tools.Screenshot(ctx, t.Name())
+	if err != nil {
+		t.Fatalf("screenshot: %v", err)
+	}
+	if out.Status != string(store.JobQueued) || out.JobID == "" {
+		t.Errorf("expected queued job id, got %+v", out)
+	}
+	job, err := st.GetJob(ctx, out.JobID)
+	if err != nil {
+		t.Fatalf("get job: %v", err)
+	}
+	if job.Type != store.JobScreenshot {
+		t.Errorf("type = %q, want screenshot", job.Type)
+	}
+}
