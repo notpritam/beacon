@@ -1,24 +1,63 @@
-# Beacon golangci-lint config (v2 schema) — strict-but-not-noisy baseline.
+# Beacon golangci-lint config (v2 schema).
+# Strict-but-stable: the standard linters plus a curated set that enforces the rules in
+# docs/GO_STYLE.md (errors, context, naming/docs, security). Tunable as the code grows.
 version: "2"
 
 run:
-  timeout: 3m
+  timeout: 5m
 
 linters:
-  # Start from the standard set (errcheck, govet, ineffassign, staticcheck, unused)
-  # and add the extras that matter for a remote-control tool.
-  default: standard
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
   enable:
-    - misspell   # typos in comments/strings
-    - revive     # style/lint
-    - bodyclose  # HTTP response bodies closed
-    - gosec      # security issues — important here
+    - errorlint     # %w wrapping + errors.Is/As, not == / type-assert
+    - revive        # naming, exported doc comments, early return, receiver naming
+    - godot         # doc comments end with a period
+    - gosec         # security — important for a remote-control tool
+    - bodyclose     # HTTP response bodies are closed
+    - noctx         # outbound requests carry a context
+    - containedctx  # no context.Context stored in structs
+    - musttag       # (un)marshaled struct fields have tags
+    - predeclared   # no shadowing of builtins
+    - nakedret      # no naked returns in longer functions
+    - unconvert     # no unnecessary conversions
+    - unparam       # no unused function parameters
+    - goconst       # repeated strings should be constants
+    - gocritic      # opinionated correctness/style checks
+    - misspell      # typos
+    - nestif        # flag deeply nested if blocks
+    - nolintlint    # //nolint directives must be specific + explained
+
+  settings:
+    nakedret:
+      max-func-lines: 30
+    nestif:
+      min-complexity: 5
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: var-naming
+        - name: receiver-naming
+        - name: error-naming
+        - name: error-strings
+        - name: error-return
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: indent-error-flow
+        - name: early-return
+        - name: unexported-return
+
+  exclusions:
+    rules:
+      # Tests may be looser: allow unchecked errors, security heuristics, repeated strings.
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - goconst
+          - unparam
 
 formatters:
-  # gofmt is a formatter in v2, not a linter.
   enable:
-    - gofmt
-
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
+    - gofumpt   # stricter gofmt
+    - goimports # grouped, ordered imports
