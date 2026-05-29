@@ -57,37 +57,37 @@ func (t JobType) Valid() bool {
 
 // Machine is a registered laptop that runs jobs.
 type Machine struct {
-	ID         string
-	Name       string
-	OS         string
-	TokenHash  string
-	LastSeen   *time.Time
-	KillSwitch bool
-	CreatedAt  time.Time
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	OS         string     `json:"os"`
+	TokenHash  string     `json:"token_hash"`
+	LastSeen   *time.Time `json:"last_seen"`
+	KillSwitch bool       `json:"kill_switch"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 // Job is a unit of work targeted at a machine.
 type Job struct {
-	ID         string
-	MachineID  string
-	Type       JobType
-	Payload    json.RawMessage
-	Status     JobStatus
-	Result     json.RawMessage
-	Priority   int
-	TTLAt      *time.Time
-	CreatedBy  string
-	CreatedAt  time.Time
-	ClaimedAt  *time.Time
-	FinishedAt *time.Time
+	ID         string          `json:"id"`
+	MachineID  string          `json:"machine_id"`
+	Type       JobType         `json:"type"`
+	Payload    json.RawMessage `json:"payload"`
+	Status     JobStatus       `json:"status"`
+	Result     json.RawMessage `json:"result"`
+	Priority   int             `json:"priority"`
+	TTLAt      *time.Time      `json:"ttl_at"`
+	CreatedBy  string          `json:"created_by"`
+	CreatedAt  time.Time       `json:"created_at"`
+	ClaimedAt  *time.Time      `json:"claimed_at"`
+	FinishedAt *time.Time      `json:"finished_at"`
 }
 
 // AuditEntry is one append-only record of a job lifecycle event.
 type AuditEntry struct {
-	ID        int64
-	JobID     string
-	MachineID string
-	Event     string
-	Detail    json.RawMessage
-	At        time.Time
+	ID        int64           `json:"id"`
+	JobID     string          `json:"job_id"`
+	MachineID string          `json:"machine_id"`
+	Event     string          `json:"event"`
+	Detail    json.RawMessage `json:"detail"`
+	At        time.Time       `json:"at"`
 }

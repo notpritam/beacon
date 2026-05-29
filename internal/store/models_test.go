@@ -17,8 +17,11 @@ func TestJobStatusValid(t *testing.T) {
 }
 
 func TestJobTypeValid(t *testing.T) {
-	if !JobShell.Valid() {
-		t.Error("shell should be valid")
+	valid := []JobType{JobShell, JobReadFile, JobWriteFile, JobListDir, JobScreenshot, JobBackground}
+	for _, jt := range valid {
+		if !jt.Valid() {
+			t.Errorf("%q should be valid", jt)
+		}
 	}
 	if JobType("frobnicate").Valid() {
 		t.Error("frobnicate should be invalid")
