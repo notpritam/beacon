@@ -45,7 +45,17 @@ func run() error {
 	server := mcp.NewServer(&mcp.Implementation{Name: "beacon", Version: "v0.1.0"}, nil)
 	registerTools(server, tools)
 
-	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil)
+	// Stateless + JSONResponse make the server usable by any HTTP/MCP client without
+	// a session handshake or SSE parsing. DisableLocalhostProtection allows requests
+	// proxied to localhost with a public Host header (reverse proxy / tunnel).
+	handler := mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return server },
+		&mcp.StreamableHTTPOptions{
+			Stateless:                  true,
+			JSONResponse:               true,
+			DisableLocalhostProtection: true,
+		},
+	)
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", bearerAuth(cfg.WingmanToken, handler))
