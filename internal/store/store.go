@@ -5,10 +5,14 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// ErrNotFound is returned when a requested row does not exist.
+var ErrNotFound = errors.New("not found")
 
 // Store provides database operations for machines, jobs, and audit entries.
 type Store struct {

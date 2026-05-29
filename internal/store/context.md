@@ -9,6 +9,16 @@
 - `(*Store).Close()` — releases the pool.
 - `(*Store).Migrate(ctx) error` — applies all embedded SQL migrations in `migrations/`
   in lexical filename order. Migrations are idempotent (`CREATE ... IF NOT EXISTS`).
+- `ErrNotFound` — sentinel error returned when a requested row does not exist.
+- Machine ops (in `machines.go`):
+  - `(*Store).RegisterMachine(ctx, name, os, tokenHash) (Machine, error)` — upsert,
+    idempotent on the unique machine name (updates OS + token hash on conflict).
+  - `(*Store).MachineByName(ctx, name) (Machine, error)` — lookup; returns `ErrNotFound`
+    if absent.
+  - `(*Store).Heartbeat(ctx, machineID) error` — sets `last_seen = now()`; returns
+    `ErrNotFound` if the machine is unknown.
+  - `(*Store).SetKillSwitch(ctx, machineID, on) error` — sets the kill switch flag;
+    returns `ErrNotFound` if the machine is unknown.
 
 **Design / flow:**
 - `store.go` owns the `Store` struct and connection lifecycle.

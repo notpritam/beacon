@@ -5,7 +5,10 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const machineColumns = `id, name, os, token_hash, last_seen, kill_switch, created_at`
@@ -26,10 +29,13 @@ RETURNING ` + machineColumns
 	return m, nil
 }
 
-// GetMachineByName returns the machine with the given name.
-func (s *Store) GetMachineByName(ctx context.Context, name string) (Machine, error) {
+// MachineByName returns the machine with the given name, or ErrNotFound if absent.
+func (s *Store) MachineByName(ctx context.Context, name string) (Machine, error) {
 	const q = `SELECT ` + machineColumns + ` FROM machines WHERE name = $1`
 	m, err := scanMachine(s.pool.QueryRow(ctx, q, name))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Machine{}, fmt.Errorf("store: machine %q: %w", name, ErrNotFound)
+	}
 	if err != nil {
 		return Machine{}, fmt.Errorf("store: get machine %q: %w", name, err)
 	}
@@ -39,8 +45,12 @@ func (s *Store) GetMachineByName(ctx context.Context, name string) (Machine, err
 // Heartbeat sets the machine's last_seen to now.
 func (s *Store) Heartbeat(ctx context.Context, machineID string) error {
 	const q = `UPDATE machines SET last_seen = now() WHERE id = $1`
-	if _, err := s.pool.Exec(ctx, q, machineID); err != nil {
+	tag, err := s.pool.Exec(ctx, q, machineID)
+	if err != nil {
 		return fmt.Errorf("store: heartbeat: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("store: heartbeat %s: %w", machineID, ErrNotFound)
 	}
 	return nil
 }
@@ -48,8 +58,12 @@ func (s *Store) Heartbeat(ctx context.Context, machineID string) error {
 // SetKillSwitch sets the machine's kill switch flag.
 func (s *Store) SetKillSwitch(ctx context.Context, machineID string, on bool) error {
 	const q = `UPDATE machines SET kill_switch = $2 WHERE id = $1`
-	if _, err := s.pool.Exec(ctx, q, machineID, on); err != nil {
+	tag, err := s.pool.Exec(ctx, q, machineID, on)
+	if err != nil {
 		return fmt.Errorf("store: set kill switch: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("store: set kill switch %s: %w", machineID, ErrNotFound)
 	}
 	return nil
 }

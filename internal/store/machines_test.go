@@ -4,6 +4,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -19,7 +20,7 @@ func TestRegisterAndGetMachine(t *testing.T) {
 		t.Fatal("expected non-empty id")
 	}
 
-	got, err := s.GetMachineByName(ctx, "mac-1")
+	got, err := s.MachineByName(ctx, "mac-1")
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
@@ -59,7 +60,7 @@ func TestHeartbeatAndKillSwitch(t *testing.T) {
 	if err := s.Heartbeat(ctx, m.ID); err != nil {
 		t.Fatalf("heartbeat: %v", err)
 	}
-	got, err := s.GetMachineByName(ctx, "mac-1")
+	got, err := s.MachineByName(ctx, "mac-1")
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
@@ -70,8 +71,40 @@ func TestHeartbeatAndKillSwitch(t *testing.T) {
 	if err := s.SetKillSwitch(ctx, m.ID, true); err != nil {
 		t.Fatalf("set kill: %v", err)
 	}
-	got, _ = s.GetMachineByName(ctx, "mac-1")
+	got, err = s.MachineByName(ctx, "mac-1")
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
 	if !got.KillSwitch {
 		t.Error("kill switch should be true")
+	}
+
+	if err := s.SetKillSwitch(ctx, m.ID, false); err != nil {
+		t.Fatalf("clear kill: %v", err)
+	}
+	got, err = s.MachineByName(ctx, "mac-1")
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.KillSwitch {
+		t.Error("kill switch should be false after toggle off")
+	}
+}
+
+func TestMachineByNameNotFound(t *testing.T) {
+	s := newTestStore(t)
+	if _, err := s.MachineByName(context.Background(), "ghost"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("want ErrNotFound, got %v", err)
+	}
+}
+
+func TestHeartbeatUnknownMachine(t *testing.T) {
+	s := newTestStore(t)
+	const ghostID = "00000000-0000-0000-0000-000000000000"
+	if err := s.Heartbeat(context.Background(), ghostID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("heartbeat: want ErrNotFound, got %v", err)
+	}
+	if err := s.SetKillSwitch(context.Background(), ghostID, true); !errors.Is(err, ErrNotFound) {
+		t.Errorf("set kill: want ErrNotFound, got %v", err)
 	}
 }
