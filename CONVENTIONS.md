@@ -93,3 +93,40 @@ Never bypass with `git commit --no-verify`.
 - Table-driven tests for pure logic (queue transitions, header checks, config parsing).
 - The executor and Supabase client are behind interfaces so they can be faked in tests.
 - A feature isn't done until its `context.md` and tests are updated.
+
+## 7. Workflow — small steps, commit each one
+
+Build in small, verifiable steps. **Each step is its own commit** and must leave the
+repo green:
+
+1. Write/adjust the test for the step's behavior first.
+2. Implement until the test passes.
+3. Update the docs the step touches — the slice's `context.md`, `README.md`, and the
+   flow/connection docs in `docs/` (see §8).
+4. Stage everything and commit through the pre-commit gate (it must pass — never
+   `--no-verify`). One focused change per commit, with a clear message.
+5. Push.
+
+Definition of done for a step: **tests pass + gate passes + docs updated + committed +
+pushed.** Don't batch many unrelated changes into one commit.
+
+## 8. Documentation — over-document the flow
+
+Beacon is a moving system across cloud + laptop; the docs must let anyone trace a
+command end-to-end without reading all the code. Keep these current **in the same commit
+as the code they describe**:
+
+- **`README.md`** — what it is, how to run each binary, how to set up the connection
+  (Supabase project, env vars, tokens), and current status.
+- **`docs/ARCHITECTURE.md`** — the living as-built doc: the end-to-end flow (you →
+  Wingman → MCP → Supabase → agent → back), the job lifecycle/state machine, the
+  **connection model** (what connects to what, in which direction, with which auth),
+  data model, and the security model. Diagrams (ASCII/Mermaid) where they help.
+- **`docs/CONNECTIONS.md`** — concrete connection/setup details: Supabase URL/keys,
+  realtime channels, the agent↔Supabase and MCP↔Supabase wiring, token issuance and
+  rotation, ports/firewall notes (none inbound — agent is outbound-only).
+- **Per-folder `context.md`** — the design/flow of that slice (see §3).
+- The **design spec** in `docs/superpowers/specs/` stays as the point-in-time design;
+  `ARCHITECTURE.md` tracks how it actually got built and any deviations.
+
+If behavior changes and a doc isn't updated in the same commit, the step isn't done.
