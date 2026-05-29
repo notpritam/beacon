@@ -126,3 +126,12 @@ func (t *Tools) Screenshot(ctx context.Context, machine string) (JobOutcome, err
 	}
 	return t.enqueueAndWait(ctx, m, store.JobScreenshot, json.RawMessage(`{}`))
 }
+
+// GUI enqueues a computer-use action (the raw `{action,...}` payload) and waits.
+func (t *Tools) GUI(ctx context.Context, machine string, action json.RawMessage) (JobOutcome, error) {
+	m, err := t.resolve(ctx, machine)
+	if err != nil {
+		return JobOutcome{}, err
+	}
+	return t.enqueueAndWait(ctx, m, store.JobGUI, action)
+}

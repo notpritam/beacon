@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/notpritam/beacon/internal/mcptools"
@@ -12,6 +14,19 @@ import (
 
 type machineInput struct {
 	Machine string `json:"machine" jsonschema:"target machine name"`
+}
+
+type guiInput struct {
+	Machine string `json:"machine" jsonschema:"target machine name"`
+	Action  string `json:"action" jsonschema:"one of: move, click, type, key, hotkey, open_app, activate_app, quit_app, list_apps, screen_size"`
+	X       int    `json:"x,omitempty" jsonschema:"x coordinate for move/click"`
+	Y       int    `json:"y,omitempty" jsonschema:"y coordinate for move/click"`
+	Button  string `json:"button,omitempty" jsonschema:"left (default) or right"`
+	Double  bool   `json:"double,omitempty" jsonschema:"double-click"`
+	Text    string `json:"text,omitempty" jsonschema:"text to type"`
+	Key     string `json:"key,omitempty" jsonschema:"named key for the key action (return, esc, tab, space, arrow-down, ...)"`
+	Combo   string `json:"combo,omitempty" jsonschema:"modifier combo for hotkey, e.g. cmd+space or cmd+c"`
+	App     string `json:"app,omitempty" jsonschema:"app name for open_app/activate_app/quit_app"`
 }
 
 type runCommandInput struct {
@@ -80,6 +95,15 @@ func registerTools(s *mcp.Server, t *mcptools.Tools) {
 	mcp.AddTool(s, &mcp.Tool{Name: "screenshot", Description: "Capture the machine's screen; result has a base64-encoded JPEG."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in machineInput) (*mcp.CallToolResult, mcptools.JobOutcome, error) {
 			out, err := t.Screenshot(ctx, in.Machine)
+			return nil, out, err
+		})
+	mcp.AddTool(s, &mcp.Tool{Name: "gui", Description: "Computer-use on the machine (macOS): mouse, keyboard, and app control. Set 'action' and the relevant fields."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in guiInput) (*mcp.CallToolResult, mcptools.JobOutcome, error) {
+			payload, err := json.Marshal(in) // executor ignores the extra "machine" field
+			if err != nil {
+				return nil, mcptools.JobOutcome{}, fmt.Errorf("gui payload: %w", err)
+			}
+			out, err := t.GUI(ctx, in.Machine, payload)
 			return nil, out, err
 		})
 }
