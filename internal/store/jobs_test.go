@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 )
@@ -48,7 +49,7 @@ func TestEnqueueRejectsInvalidType(t *testing.T) {
 	}
 }
 
-func TestClaimNextJobIsAtomic(t *testing.T) {
+func TestClaimedJobIsNotReclaimed(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()
 	mid := seedMachine(t, s)
@@ -74,6 +75,53 @@ func TestClaimNextJobIsAtomic(t *testing.T) {
 	}
 	if second != nil {
 		t.Errorf("second claim should return nil, got %s", second.ID)
+	}
+}
+
+func TestClaimIsAtomicUnderConcurrency(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	mid := seedMachine(t, s)
+
+	const jobs = 200
+	for range jobs {
+		if _, err := s.EnqueueJob(ctx, mid, JobShell, json.RawMessage(`{}`), 0, nil, ""); err != nil {
+			t.Fatalf("enqueue: %v", err)
+		}
+	}
+
+	const workers = 16
+	var (
+		mu      sync.Mutex
+		claimed = make(map[string]int)
+		wg      sync.WaitGroup
+	)
+	for range workers {
+		wg.Go(func() {
+			for {
+				j, err := s.ClaimNextJob(ctx, mid)
+				if err != nil {
+					t.Errorf("claim: %v", err)
+					return
+				}
+				if j == nil {
+					return
+				}
+				mu.Lock()
+				claimed[j.ID]++
+				mu.Unlock()
+			}
+		})
+	}
+	wg.Wait()
+
+	if len(claimed) != jobs {
+		t.Errorf("claimed %d distinct jobs, want %d", len(claimed), jobs)
+	}
+	for id, n := range claimed {
+		if n != 1 {
+			t.Errorf("job %s claimed %d times, want exactly 1", id, n)
+		}
 	}
 }
 
