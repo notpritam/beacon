@@ -1,19 +1,23 @@
-# Beacon golangci-lint config — a sensible, strict-but-not-noisy baseline.
+# Beacon golangci-lint config (v2 schema) — strict-but-not-noisy baseline.
+version: "2"
+
 run:
   timeout: 3m
 
 linters:
+  # Start from the standard set (errcheck, govet, ineffassign, staticcheck, unused)
+  # and add the extras that matter for a remote-control tool.
+  default: standard
   enable:
-    - errcheck      # unchecked errors
-    - govet         # suspicious constructs
-    - staticcheck   # the big one: correctness + simplification
-    - ineffassign   # ineffective assignments
-    - unused        # dead code
-    - misspell      # typos in comments/strings
-    - gofmt         # formatting
-    - revive        # style/lint (replacement for golint)
-    - bodyclose     # http response bodies closed
-    - gosec         # security issues (important for a remote-control tool)
+    - misspell   # typos in comments/strings
+    - revive     # style/lint
+    - bodyclose  # HTTP response bodies closed
+    - gosec      # security issues — important here
+
+formatters:
+  # gofmt is a formatter in v2, not a linter.
+  enable:
+    - gofmt
 
 issues:
   max-issues-per-linter: 0
