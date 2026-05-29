@@ -17,9 +17,11 @@
 concurrent test). Lifecycle updates (`setStatus`) and lookups map a missing row to
 `ErrNotFound`. Migrations are embedded SQL applied in filename order, idempotent via
 `IF NOT EXISTS`. Structs carry `json` tags matching the DB column names; nullable
-timestamps are `*time.Time`; `payload`/`result`/`detail` are `json.RawMessage`. RLS is not
-used in Phase 0 — the connection string is the secret and per-machine tokens are checked
-in app logic.
+timestamps are `*time.Time`; `payload`/`result`/`detail` are `json.RawMessage`.
+`audit_log` has no foreign keys and nullable `job_id`/`machine_id`, so the append-only
+trail survives deletion of the referenced job/machine — a compromised cloud row can't
+erase history. RLS is not used in Phase 0 — the connection string is the secret and
+per-machine tokens are checked in app logic.
 
 **Depends on:** `github.com/jackc/pgx/v5` (+ `pgxpool`), Postgres.
 
