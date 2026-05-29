@@ -18,6 +18,10 @@ type Config struct {
 	MachineName string
 	// MachineToken is the per-machine secret presented for authentication.
 	MachineToken string
+	// WingmanToken is the bearer token the MCP server requires from callers.
+	WingmanToken string
+	// MCPAddr is the MCP server listen address (default ":8080").
+	MCPAddr string
 }
 
 // Load reads configuration from the environment and validates required fields.
@@ -29,6 +33,11 @@ func Load() (Config, error) {
 	}
 	if c.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("config: BEACON_DATABASE_URL is required")
+	}
+	c.WingmanToken = os.Getenv("BEACON_WINGMAN_TOKEN")
+	c.MCPAddr = os.Getenv("BEACON_MCP_ADDR")
+	if c.MCPAddr == "" {
+		c.MCPAddr = ":8080"
 	}
 	return c, nil
 }

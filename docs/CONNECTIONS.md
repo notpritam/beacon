@@ -9,7 +9,7 @@ how to set it up. Updated alongside the code. _(Sections marked pending fill in 
 |---|---|---|---|---|
 | Laptop agent (`cmd/agent`) | Supabase | **outbound only** | HTTPS + Realtime (WebSocket, agent-initiated) | per-machine token |
 | MCP server (`cmd/mcp`) | Supabase | outbound | HTTPS (REST/RPC) | service/Wingman token |
-| Wingman (Emergent) | MCP server | inbound to MCP | MCP transport (stdio or HTTP) | Wingman token |
+| Wingman (Emergent) | MCP server | inbound to MCP | MCP streamable HTTP (`/mcp`) | `Authorization: Bearer <BEACON_WINGMAN_TOKEN>` |
 
 **Key property:** the laptop agent never accepts inbound connections — it dials out to
 Supabase. So it works behind any home Wi-Fi / NAT / firewall with **no port forwarding**.
@@ -21,12 +21,16 @@ Configured via env (loaded by `internal/config`; never hardcoded, never committe
 
 - `BEACON_DATABASE_URL` — **(required)** Postgres connection string (your Supabase DB URL
   or local Postgres). Everything fails without this.
-- `BEACON_MACHINE_NAME` — human label for this machine (optional in Phase 0a; empty if unset).
-- `BEACON_MACHINE_TOKEN` — per-machine token the agent presents (optional in Phase 0a;
+- `BEACON_MACHINE_NAME` — human label for this machine (optional; defaults to hostname).
+- `BEACON_MACHINE_TOKEN` — per-machine token the agent presents (optional in Phase 0;
   required when RLS / token checking is enforced in Phase 4).
+- `BEACON_WINGMAN_TOKEN` — **(required for `cmd/mcp`)** Bearer token Wingman must send on
+  every MCP request (`Authorization: Bearer <token>`). The MCP server refuses to start
+  if this is unset. Keep this secret — it grants full remote-control access.
+- `BEACON_MCP_ADDR` — TCP listen address for `cmd/mcp` (default `:8080`; e.g. `:9090`).
 
-Supabase-specific keys (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`,
-`BEACON_WINGMAN_TOKEN`) are deferred until the Supabase project is wired up.
+Supabase-specific keys (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`)
+are deferred until the Supabase project is wired up.
 
 ## Supabase setup _(pending)_
 
@@ -69,4 +73,7 @@ go run ./cmd/beaconctl migrate                   # create the schema
 go run ./cmd/beaconctl machines                  # list registered machines
 ```
 
-`cmd/agent` and `cmd/mcp` are implemented in later phases.
+```bash
+# start the MCP server (Phase 0c)
+BEACON_DATABASE_URL=postgres://... BEACON_WINGMAN_TOKEN=<secret> go run ./cmd/mcp
+```

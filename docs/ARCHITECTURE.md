@@ -3,7 +3,7 @@
 This is the canonical doc for how Beacon is **built** and how a command flows
 end-to-end. It is updated in the same commit as the code it describes.
 
-> Status: Phase 0b — laptop agent implemented and running. The agent claims, executes, and reports jobs (polling; screenshot/background deferred to later phases).
+> Status: Phase 0c — MCP server implemented. Wingman can now call all 7 tools over streamable HTTP with bearer auth. The laptop agent claims, executes, and reports jobs (polling; screenshot/background deferred to later phases).
 
 ## Components
 
@@ -17,11 +17,14 @@ Internal slices (each has its own `context.md`):
 
 - **Implemented (Phase 0a):** `internal/config`, `internal/store`
 - **Implemented (Phase 0b):** `internal/executor`, `internal/killswitch`, `internal/localaudit`, `internal/agent`
-- **Pending (later phases):** `internal/queue`, `internal/mcptools`
+- **Implemented (Phase 0c):** `internal/mcptools`, `cmd/mcp` — 7 tools over streamable HTTP with bearer auth (screenshot/background deferred to later phases)
+- **Pending (later phases):** `internal/queue`
 
 Admin/debug CLI: `cmd/beaconctl` — `migrate`, `machines`, `enqueue <machine> <cmd>`, `get <job-id>`.
 
 Laptop daemon: `cmd/agent` — registers the machine and drains its job queue (shell + file ops); clean shutdown on SIGINT/SIGTERM.
+
+MCP server: `cmd/mcp` — serves the 7 Beacon tools over streamable HTTP at `/mcp`; requires `Authorization: Bearer <BEACON_WINGMAN_TOKEN>` on every request.
 
 ## End-to-end flow
 
