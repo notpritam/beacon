@@ -21,8 +21,7 @@ beacon/
     audit/        # local append-only audit mirror
     killswitch/   # cloud-flag + local-sentinel kill switch
     mcptools/     # MCP tool definitions wired by cmd/mcp
-  docs/
-    superpowers/specs/   # design specs
+  docs/           # ARCHITECTURE.md, CONNECTIONS.md, GO_STYLE.md
   scripts/        # dev/CI scripts (e.g. check-aboutme.sh)
   .githooks/      # pre-commit gate
 ```
@@ -47,7 +46,7 @@ The pre-commit hook rejects any staged `.go` file missing both lines.
 ## 3. Every folder: `context.md` (the "about this slice" doc)
 
 Each package folder under `cmd/` and `internal/` has a `context.md`. It is the design
-memory of that slice so a future change (by you or an agent) stays consistent. Keep it
+memory of that slice so a future change (by you or another contributor) stays consistent. Keep it
 short and current — update it in the same commit that changes the slice.
 
 Template:
@@ -126,7 +125,7 @@ as the code they describe**:
   realtime channels, the agent↔Supabase and MCP↔Supabase wiring, token issuance and
   rotation, ports/firewall notes (none inbound — agent is outbound-only).
 - **Per-folder `context.md`** — the design/flow of that slice (see §3).
-- The **design spec** in `docs/superpowers/specs/` stays as the point-in-time design;
-  `ARCHITECTURE.md` tracks how it actually got built and any deviations.
+- `docs/ARCHITECTURE.md` is the canonical design + flow doc — keep it current as the
+  build evolves, in the same commit as the code it describes.
 
 If behavior changes and a doc isn't updated in the same commit, the step isn't done.

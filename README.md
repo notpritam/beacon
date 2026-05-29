@@ -20,13 +20,13 @@ You → Wingman → MCP server → Supabase queue → Laptop agent → executes 
 - **`cmd/mcp`** — the cloud MCP server Wingman talks to.
 - **Supabase** — Postgres queue + machines + audit log, Storage, realtime, RLS auth.
 
-Full design: [`docs/superpowers/specs/2026-05-29-beacon-design.md`](docs/superpowers/specs/2026-05-29-beacon-design.md).
+Full design and flow: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Status
 
 Phase 0 (MVP) in progress: schema, agent, MCP server, auth, audit, kill switch on one
 macOS machine. Roadmap (background jobs → dashboard → interactive computer-use → fleet)
-is in the design spec.
+is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Development
 
@@ -42,7 +42,7 @@ brew install golangci-lint        # or: see https://golangci-lint.run/welcome/in
 
 The pre-commit gate runs gofmt, `go vet`, `golangci-lint`, build, tests, and the
 ABOUTME-header check on staged Go files. See [`CONVENTIONS.md`](CONVENTIONS.md) and
-[`CLAUDE.md`](CLAUDE.md) for the engineering rules.
+[`docs/GO_STYLE.md`](docs/GO_STYLE.md) for the engineering rules.
 
 ## License
 

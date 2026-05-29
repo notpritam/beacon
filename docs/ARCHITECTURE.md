@@ -1,9 +1,7 @@
 # Beacon Architecture (living doc)
 
-This tracks how Beacon is **actually built** and how a command flows end-to-end. It is
-updated in the same commit as the code it describes. The point-in-time design rationale
-lives in `docs/superpowers/specs/2026-05-29-beacon-design.md`; deviations from it are
-noted here.
+This is the canonical doc for how Beacon is **built** and how a command flows
+end-to-end. It is updated in the same commit as the code it describes.
 
 > Status: Phase 0 (MVP) — scaffolding. Sections marked _(pending)_ fill in as code lands.
 

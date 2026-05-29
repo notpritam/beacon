@@ -25,3 +25,22 @@ coverage.*
 # Local runtime state (agent audit mirror, sentinels)
 /.beacon/
 *.log
+
+# Local-only — process / planning / tooling artifacts (never published)
+/CLAUDE.md
+/AGENTS.md
+/GEMINI.md
+/docs/superpowers/
+/docs/plans/
+/docs/specs/
+plan-approach.md
+/.claude/
+/.superpowers/
+/.agents/
+/.scratch/
+/.tmp/
+/current-state/
+.cursor/
+.windsurf/
+.aider*
+.continue/
