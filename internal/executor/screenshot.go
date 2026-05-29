@@ -4,10 +4,12 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image/jpeg"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +22,8 @@ const osDarwin = "darwin"
 type screenshotResult struct {
 	Format string `json:"format"`
 	Bytes  int    `json:"bytes"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
 	Base64 string `json:"base64"`
 }
 
@@ -62,12 +66,17 @@ func (e *Executor) screenshot(ctx context.Context) (json.RawMessage, error) {
 	return encodeScreenshot(data)
 }
 
-// encodeScreenshot wraps raw JPEG bytes into the screenshot result JSON.
+// encodeScreenshot wraps raw JPEG bytes into the screenshot result JSON, including
+// the image's pixel dimensions (so callers can map screen coordinates for clicks).
 func encodeScreenshot(data []byte) (json.RawMessage, error) {
 	res := screenshotResult{
 		Format: "jpeg",
 		Bytes:  len(data),
 		Base64: base64.StdEncoding.EncodeToString(data),
+	}
+	if cfg, err := jpeg.DecodeConfig(bytes.NewReader(data)); err == nil {
+		res.Width = cfg.Width
+		res.Height = cfg.Height
 	}
 	out, err := json.Marshal(res)
 	if err != nil {
