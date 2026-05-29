@@ -69,6 +69,8 @@ func (e *Executor) Execute(ctx context.Context, job store.Job) (json.RawMessage,
 		return e.listDir(job.Payload)
 	case store.JobScreenshot:
 		return e.screenshot(ctx)
+	case store.JobGUI:
+		return e.gui(ctx, job.Payload)
 	default:
 		return nil, fmt.Errorf("executor: unsupported job type %q", job.Type)
 	}

@@ -42,13 +42,14 @@ const (
 	JobWriteFile  JobType = "write_file"
 	JobListDir    JobType = "list_dir"
 	JobScreenshot JobType = "screenshot"
+	JobGUI        JobType = "gui"
 	JobBackground JobType = "background"
 )
 
 // Valid reports whether t is a known job type.
 func (t JobType) Valid() bool {
 	switch t {
-	case JobShell, JobReadFile, JobWriteFile, JobListDir, JobScreenshot, JobBackground:
+	case JobShell, JobReadFile, JobWriteFile, JobListDir, JobScreenshot, JobGUI, JobBackground:
 		return true
 	default:
 		return false
