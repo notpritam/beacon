@@ -108,3 +108,21 @@ func TestHeartbeatUnknownMachine(t *testing.T) {
 		t.Errorf("set kill: want ErrNotFound, got %v", err)
 	}
 }
+
+func TestListMachines(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if _, err := s.RegisterMachine(ctx, "mac-1", "darwin", "h1"); err != nil {
+		t.Fatalf("reg1: %v", err)
+	}
+	if _, err := s.RegisterMachine(ctx, "mac-2", "linux", "h2"); err != nil {
+		t.Fatalf("reg2: %v", err)
+	}
+	ms, err := s.ListMachines(ctx)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(ms) != 2 {
+		t.Errorf("len = %d, want 2", len(ms))
+	}
+}

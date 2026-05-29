@@ -73,6 +73,28 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
+// ListMachines returns all registered machines, newest first.
+func (s *Store) ListMachines(ctx context.Context) ([]Machine, error) {
+	const q = `SELECT ` + machineColumns + ` FROM machines ORDER BY created_at DESC`
+	rows, err := s.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("store: list machines: %w", err)
+	}
+	defer rows.Close()
+	var out []Machine
+	for rows.Next() {
+		m, err := scanMachine(rows)
+		if err != nil {
+			return nil, fmt.Errorf("store: scan machine: %w", err)
+		}
+		out = append(out, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: iterate machines: %w", err)
+	}
+	return out, nil
+}
+
 func scanMachine(r rowScanner) (Machine, error) {
 	var m Machine
 	if err := r.Scan(&m.ID, &m.Name, &m.OS, &m.TokenHash, &m.LastSeen, &m.KillSwitch, &m.CreatedAt); err != nil {
