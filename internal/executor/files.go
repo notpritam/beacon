@@ -17,6 +17,8 @@ type readResult struct {
 	Content string `json:"content"`
 }
 
+// Note: file content is carried as a UTF-8 JSON string; binary files are not
+// supported (invalid bytes are mangled by JSON). Base64 content is a later phase.
 func (e *Executor) readFile(payload json.RawMessage) (json.RawMessage, error) {
 	var p pathPayload
 	if err := json.Unmarshal(payload, &p); err != nil {

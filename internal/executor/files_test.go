@@ -119,3 +119,23 @@ func TestListDir(t *testing.T) {
 		t.Error("a.txt should not be a dir")
 	}
 }
+
+func TestWriteFileMissingParent(t *testing.T) {
+	e := New(DefaultConfig())
+	bad := filepath.Join(t.TempDir(), "nope", "out.txt") // parent "nope" does not exist
+	payload, err := json.Marshal(map[string]string{"path": bad, "content": "x"})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if _, err := e.Execute(context.Background(), store.Job{Type: store.JobWriteFile, Payload: json.RawMessage(payload)}); err == nil {
+		t.Error("expected error writing into a missing parent directory")
+	}
+}
+
+func TestListDirMissing(t *testing.T) {
+	e := New(DefaultConfig())
+	missing := filepath.Join(t.TempDir(), "nope")
+	if _, err := e.Execute(context.Background(), store.Job{Type: store.JobListDir, Payload: json.RawMessage(pathJSON(t, missing))}); err == nil {
+		t.Error("expected error listing a missing directory")
+	}
+}

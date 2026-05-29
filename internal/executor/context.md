@@ -32,7 +32,7 @@
 - Output is capped per-stream at `MaxOutputBytes` via `capString`.
 - File jobs (`JobReadFile`, `JobWriteFile`, `JobListDir`) are handled in `files.go`:
   - `readFile`: stats the path to check size against `MaxReadBytes` before reading; returns `readResult{Content}`.
-  - `writeFile`: writes content with 0644 permissions; returns `writeResult{BytesWritten}`.
+  - `writeFile`: writes content with 0644 permissions; returns `writeResult{BytesWritten}`. Requires the parent directory to already exist (no `mkdir -p`) and fails otherwise.
   - `listDir`: reads directory entries via `os.ReadDir`; returns `listResult{Entries}` where each entry has `Name`, `IsDir`, and `Size`.
   - All three take only `payload` (no ctx) — file ops are fast and non-cancellable at the OS level.
 - Unsupported job types return an explicit `fmt.Errorf` (not a panic).
