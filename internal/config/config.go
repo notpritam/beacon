@@ -22,6 +22,10 @@ type Config struct {
 	WingmanToken string
 	// MCPAddr is the MCP server listen address (default ":8080").
 	MCPAddr string
+	// DashboardToken gates the live-view dashboard. Empty disables the dashboard.
+	DashboardToken string
+	// DashboardAddr is the live-view dashboard listen address (default ":8081").
+	DashboardAddr string
 }
 
 // Load reads configuration from the environment and validates required fields.
@@ -38,6 +42,11 @@ func Load() (Config, error) {
 	c.MCPAddr = os.Getenv("BEACON_MCP_ADDR")
 	if c.MCPAddr == "" {
 		c.MCPAddr = ":8080"
+	}
+	c.DashboardToken = os.Getenv("BEACON_DASHBOARD_TOKEN")
+	c.DashboardAddr = os.Getenv("BEACON_DASHBOARD_ADDR")
+	if c.DashboardAddr == "" {
+		c.DashboardAddr = ":8081"
 	}
 	return c, nil
 }

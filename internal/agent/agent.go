@@ -95,6 +95,11 @@ func (a *Agent) Register(ctx context.Context, name, osName, token string) error 
 	return nil
 }
 
+// MachineID returns this machine's id (set by Register), or "" if not registered.
+func (a *Agent) MachineID() string {
+	return a.machineID
+}
+
 // hashToken returns the hex-encoded SHA-256 of the token.
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))

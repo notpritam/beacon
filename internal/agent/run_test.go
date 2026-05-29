@@ -73,7 +73,7 @@ func TestRunOnceFailsUnsupportedJob(t *testing.T) {
 	st := newAgentStore(t)
 	a, mid := registeredAgent(t, st)
 	ctx := context.Background()
-	j, err := st.EnqueueJob(ctx, mid, store.JobScreenshot, json.RawMessage(`{}`), 0, nil, "test")
+	j, err := st.EnqueueJob(ctx, mid, store.JobBackground, json.RawMessage(`{}`), 0, nil, "test")
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}

@@ -27,9 +27,18 @@ type screenshotResult struct {
 	Base64 string `json:"base64"`
 }
 
-// screenshot captures the whole screen (macOS only), downscales it to keep the
-// payload small, and returns it as a base64-encoded JPEG.
+// screenshot captures the screen and returns it as a base64-encoded JPEG (with dims).
 func (e *Executor) screenshot(ctx context.Context) (json.RawMessage, error) {
+	data, err := e.CaptureScreenshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return encodeScreenshot(data)
+}
+
+// CaptureScreenshot captures the whole screen (macOS only), downscales it, and
+// returns the raw JPEG bytes. Used both by the screenshot job and the live stream.
+func (e *Executor) CaptureScreenshot(ctx context.Context) ([]byte, error) {
 	if runtime.GOOS != osDarwin {
 		return nil, fmt.Errorf("executor: screenshot is only supported on macOS")
 	}
@@ -50,7 +59,7 @@ func (e *Executor) screenshot(ctx context.Context) (json.RawMessage, error) {
 		return nil, fmt.Errorf("executor: screencapture produced no image (Screen Recording permission may be missing)")
 	}
 
-	// Best-effort downscale so the encoded payload stays small.
+	// Best-effort downscale so the payload stays small.
 	if e.cfg.MaxScreenshotDim > 0 {
 		resize := exec.CommandContext(ctx, "sips", "-Z", strconv.Itoa(e.cfg.MaxScreenshotDim), path) //nolint:gosec // resizing our own temp screenshot
 		_ = resize.Run()                                                                             // if sips fails, fall back to the full-size capture
@@ -63,7 +72,7 @@ func (e *Executor) screenshot(ctx context.Context) (json.RawMessage, error) {
 	if e.cfg.MaxScreenshotBytes > 0 && len(data) > e.cfg.MaxScreenshotBytes {
 		return nil, fmt.Errorf("executor: screenshot is %d bytes, exceeds limit %d", len(data), e.cfg.MaxScreenshotBytes)
 	}
-	return encodeScreenshot(data)
+	return data, nil
 }
 
 // encodeScreenshot wraps raw JPEG bytes into the screenshot result JSON, including

@@ -6,15 +6,19 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/notpritam/beacon/internal/agent"
 	"github.com/notpritam/beacon/internal/config"
+	"github.com/notpritam/beacon/internal/dashboard"
 	"github.com/notpritam/beacon/internal/executor"
 	"github.com/notpritam/beacon/internal/localaudit"
 	"github.com/notpritam/beacon/internal/store"
@@ -65,9 +69,14 @@ func run() error {
 	auditPath := filepath.Join(stateDir, "audit.log")
 	sentinel := filepath.Join(stateDir, "killswitch")
 
-	ag := agent.New(st, executor.New(executor.DefaultConfig()), localaudit.New(auditPath), sentinel, agent.Options{})
+	exec := executor.New(executor.DefaultConfig())
+	ag := agent.New(st, exec, localaudit.New(auditPath), sentinel, agent.Options{})
 	if err := ag.Register(ctx, name, runtime.GOOS, cfg.MachineToken); err != nil {
 		return err
+	}
+
+	if cfg.DashboardToken != "" {
+		startDashboard(ctx, cfg, exec, st, ag.MachineID())
 	}
 
 	fmt.Printf("beacon-agent running as %q (audit: %s, kill-switch sentinel: %s)\n", name, auditPath, sentinel)
@@ -76,4 +85,61 @@ func run() error {
 	}
 	fmt.Println("beacon-agent stopped")
 	return nil
+}
+
+// startDashboard launches the live-view dashboard. The screen is only captured
+// while a viewer is connected (the MJPEG stream runs per-request), so it is idle
+// when nobody is watching. It is gated by BEACON_DASHBOARD_TOKEN.
+func startDashboard(ctx context.Context, cfg config.Config, exec *executor.Executor, st *store.Store, machineID string) {
+	jobsFn := func(ctx context.Context) (any, error) {
+		js, err := st.RecentJobs(ctx, machineID, 20)
+		if err != nil {
+			return nil, err
+		}
+		type view struct {
+			ID        string    `json:"id"`
+			Type      string    `json:"type"`
+			Status    string    `json:"status"`
+			CreatedAt time.Time `json:"created_at"`
+			Result    string    `json:"result"`
+		}
+		out := make([]view, 0, len(js))
+		for _, j := range js {
+			out = append(out, view{
+				ID: j.ID, Type: string(j.Type), Status: string(j.Status),
+				CreatedAt: j.CreatedAt, Result: summarizeResult(j),
+			})
+		}
+		return out, nil
+	}
+
+	dash := dashboard.New(cfg.DashboardToken, exec.CaptureScreenshot, jobsFn, 3)
+	srv := &http.Server{Addr: cfg.DashboardAddr, Handler: dash.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	go func() {
+		<-ctx.Done()
+		_ = srv.Close()
+	}()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			fmt.Fprintln(os.Stderr, "dashboard:", err)
+		}
+	}()
+	fmt.Printf("beacon dashboard on %s — open /?token=<BEACON_DASHBOARD_TOKEN>; the screen streams only while a viewer is connected\n", cfg.DashboardAddr)
+}
+
+// summarizeResult returns a short, feed-friendly string for a job's result,
+// avoiding huge payloads like screenshot base64.
+func summarizeResult(j store.Job) string {
+	if len(j.Result) == 0 {
+		return ""
+	}
+	if j.Type == store.JobScreenshot {
+		return "screenshot captured"
+	}
+	s := string(j.Result)
+	const maxLen = 200
+	if len(s) > maxLen {
+		return s[:maxLen] + "…"
+	}
+	return s
 }
