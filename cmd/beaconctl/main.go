@@ -24,7 +24,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: beaconctl <migrate|enqueue|get|machines> [args]")
+		return fmt.Errorf("usage: beaconctl <migrate|machines|enqueue|get> [args]")
 	}
 	cfg, err := config.Load()
 	if err != nil {
@@ -49,6 +49,9 @@ func run(args []string) error {
 		machines, err := st.ListMachines(ctx)
 		if err != nil {
 			return err
+		}
+		if machines == nil {
+			machines = []store.Machine{}
 		}
 		out, err := json.MarshalIndent(machines, "", "  ")
 		if err != nil {
