@@ -52,6 +52,7 @@ whether each is **online** (heartbeating). If a machine is offline, action tools
 | `read_file` | `machine`, `path` | `JobOutcome` (result `{content}`) |
 | `write_file` | `machine`, `path`, `content` | `JobOutcome` (result `{bytes_written}`) |
 | `list_dir` | `machine`, `path` | `JobOutcome` (result `{entries:[{name,is_dir,size}]}`) |
+| `screenshot` | `machine` | `JobOutcome` (result `{format:"jpeg", bytes, base64}`) — macOS only |
 | `get_job` | `job_id` | `JobOutcome` |
 
 **`JobOutcome`** = `{ job_id, status, machine_online, result }`. `status` is one of
@@ -88,7 +89,8 @@ Response (`result.structuredContent`):
 - `status:"failed"` means the job could not execute (bad path, unsupported type); `result`
   carries an `error`.
 - For long or offline work, expect `status:"queued"`/`"running"` and poll `get_job`.
-- `screenshot` and background/long-running jobs are **not available yet**.
+- `screenshot` (macOS) returns a base64-encoded JPEG in `result.base64` — decode it to view.
+- Background/long-running jobs are **not available yet**.
 
 ## Safety
 

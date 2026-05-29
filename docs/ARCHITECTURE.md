@@ -3,7 +3,7 @@
 This is the canonical doc for how Beacon is **built** and how a command flows
 end-to-end. It is updated in the same commit as the code it describes.
 
-> Status: Phase 0c — MCP server implemented. Wingman can now call all 7 tools over streamable HTTP with bearer auth. The laptop agent claims, executes, and reports jobs (polling; screenshot/background deferred to later phases).
+> Status: Phase 0c — MCP server implemented. Wingman can call all 8 tools over streamable HTTP with bearer auth. The laptop agent claims, executes, and reports jobs (polling; screenshot supported on macOS, background jobs deferred).
 
 ## Components
 
@@ -17,7 +17,7 @@ Internal slices (each has its own `context.md`):
 
 - **Implemented (Phase 0a):** `internal/config`, `internal/store`
 - **Implemented (Phase 0b):** `internal/executor`, `internal/killswitch`, `internal/localaudit`, `internal/agent`
-- **Implemented (Phase 0c):** `internal/mcptools`, `cmd/mcp` — 7 tools over streamable HTTP with bearer auth (screenshot/background deferred to later phases)
+- **Implemented (Phase 0c):** `internal/mcptools`, `cmd/mcp` — 8 tools over streamable HTTP with bearer auth (screenshot macOS-only; background jobs deferred)
 - **Pending (later phases):** `internal/queue`
 
 Admin/debug CLI: `cmd/beaconctl` — `migrate`, `machines`, `enqueue <machine> <cmd>`, `get <job-id>`.
@@ -43,7 +43,7 @@ You ─talk─▶ Wingman (cloud) ─MCP tool─▶ cmd/mcp ─insert queued job
    - Online → agent picks the row up on its next poll (Phase 0b; realtime push later), claims, runs.
    - Offline → row stays `queued` (until `ttl_at`); MCP returns `{job_id, status:queued}`.
 4. Agent claims atomically (`queued→claimed`), executes, writes `result` + `status=done`.
-   Shell commands and file ops are implemented; screenshot/background jobs are deferred.
+   Shell, file ops, and screenshot (macOS) are implemented; background jobs are deferred.
 5. `cmd/mcp` long-polls the row and returns the result to Wingman.
 
 ## Job lifecycle
@@ -67,7 +67,8 @@ Three tables:
 One index: **`idx_jobs_claimable`** on `(machine_id, status, priority DESC, created_at)`,
 used by the `FOR UPDATE SKIP LOCKED` claim path.
 
-A Storage bucket for large output/screenshots is deferred to a later phase.
+Screenshots are returned inline as a downscaled base64 JPEG in the job result; a Storage
+bucket for very large output is deferred to a later phase.
 
 ## Security model
 
