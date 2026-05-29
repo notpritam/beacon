@@ -6,7 +6,8 @@
 - Lifecycle: `New(ctx, url)`, `(*Store).Close()`, `(*Store).Migrate(ctx)`. `ErrNotFound`
   is returned by lookups/updates when the target row does not exist.
 - Machines: `RegisterMachine` (idempotent upsert on name), `MachineByName`, `ListMachines`
-  (all machines, newest first), `Heartbeat`, `SetKillSwitch`.
+  (all machines, newest first), `Heartbeat`, `SetKillSwitch`, `MachineKillSwitch` (read
+  the current kill-switch state by machine ID).
 - Jobs: `EnqueueJob`, `ClaimNextJob` (atomic, returns nil when the queue is empty),
   `StartJob`, `CompleteJob`, `FailJob`, `GetJob`, `ExpireDueJobs`.
 - Audit: `AppendAudit` (append-only), `ListAudit` (newest first).

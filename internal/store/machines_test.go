@@ -126,3 +126,35 @@ func TestListMachines(t *testing.T) {
 		t.Errorf("len = %d, want 2", len(ms))
 	}
 }
+
+func TestMachineKillSwitch(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	m, err := s.RegisterMachine(ctx, "mac-1", "darwin", "h")
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	on, err := s.MachineKillSwitch(ctx, m.ID)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if on {
+		t.Error("kill switch should default to false")
+	}
+
+	if err := s.SetKillSwitch(ctx, m.ID, true); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	on, err = s.MachineKillSwitch(ctx, m.ID)
+	if err != nil {
+		t.Fatalf("read 2: %v", err)
+	}
+	if !on {
+		t.Error("kill switch should be true after set")
+	}
+
+	if _, err := s.MachineKillSwitch(ctx, "00000000-0000-0000-0000-000000000000"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("unknown machine: want ErrNotFound, got %v", err)
+	}
+}
