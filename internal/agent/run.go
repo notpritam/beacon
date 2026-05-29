@@ -53,6 +53,10 @@ func (a *Agent) processJob(ctx context.Context, job *store.Job) error {
 
 	result, execErr := a.exec.Execute(ctx, *job)
 	if execErr != nil {
+		if ctx.Err() != nil {
+			// Shutdown/cancel is not a job failure; leave it running for the reaper.
+			return fmt.Errorf("agent: job %s interrupted: %w", job.ID, ctx.Err())
+		}
 		failResult, err := json.Marshal(map[string]string{"error": execErr.Error()})
 		if err != nil {
 			failResult = []byte(`{"error":"execution failed"}`)
@@ -106,8 +110,8 @@ func (a *Agent) Run(ctx context.Context) error {
 		if err != nil {
 			a.log.Error("run once", "err", err)
 		}
-		if did {
-			continue
+		if did && err == nil {
+			continue // drain quickly only when work succeeded
 		}
 		select {
 		case <-ctx.Done():

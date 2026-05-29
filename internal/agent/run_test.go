@@ -5,8 +5,12 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
+	"github.com/notpritam/beacon/internal/executor"
+	"github.com/notpritam/beacon/internal/localaudit"
 	"github.com/notpritam/beacon/internal/store"
 )
 
@@ -23,7 +27,8 @@ func TestRunOnceExecutesShellJob(t *testing.T) {
 	st := newAgentStore(t)
 	a, mid := registeredAgent(t, st)
 	ctx := context.Background()
-	if _, err := st.EnqueueJob(ctx, mid, store.JobShell, json.RawMessage(`{"cmd":"echo hi"}`), 0, nil, "test"); err != nil {
+	j, err := st.EnqueueJob(ctx, mid, store.JobShell, json.RawMessage(`{"cmd":"echo hi"}`), 0, nil, "test")
+	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
 	did, err := a.RunOnce(ctx)
@@ -33,9 +38,21 @@ func TestRunOnceExecutesShellJob(t *testing.T) {
 	if !did {
 		t.Fatal("expected RunOnce to do work")
 	}
-	claimed, _ := st.ClaimNextJob(ctx, mid)
-	if claimed != nil {
-		t.Error("queue should be empty after processing")
+	got, err := st.GetJob(ctx, j.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.Status != store.JobDone {
+		t.Errorf("status = %q, want done", got.Status)
+	}
+	var res struct {
+		Stdout string `json:"stdout"`
+	}
+	if err := json.Unmarshal(got.Result, &res); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if !strings.Contains(res.Stdout, "hi") {
+		t.Errorf("stdout = %q, want it to contain hi", res.Stdout)
 	}
 }
 
@@ -91,5 +108,43 @@ func TestRunOnceSkipsWhenKillSwitchTripped(t *testing.T) {
 	claimed, _ := st.ClaimNextJob(ctx, mid)
 	if claimed == nil {
 		t.Error("job should still be queued when kill switch is tripped")
+	}
+}
+
+type fakeStore struct {
+	job      *store.Job
+	startErr error
+}
+
+func (f *fakeStore) RegisterMachine(_ context.Context, name, _, _ string) (store.Machine, error) {
+	return store.Machine{ID: "m-fake", Name: name}, nil
+}
+func (f *fakeStore) Heartbeat(_ context.Context, _ string) error                  { return nil }
+func (f *fakeStore) ClaimNextJob(_ context.Context, _ string) (*store.Job, error) { return f.job, nil }
+func (f *fakeStore) StartJob(_ context.Context, _ string) error                   { return f.startErr }
+func (f *fakeStore) CompleteJob(_ context.Context, _ string, _ json.RawMessage) error {
+	return nil
+}
+func (f *fakeStore) FailJob(_ context.Context, _ string, _ json.RawMessage) error { return nil }
+func (f *fakeStore) AppendAudit(_ context.Context, _, _, _ string, _ json.RawMessage) error {
+	return nil
+}
+
+func (f *fakeStore) MachineKillSwitch(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+
+func TestRunOnceInfraErrorPropagates(t *testing.T) {
+	fs := &fakeStore{
+		job:      &store.Job{ID: "j1", Type: store.JobShell, Payload: json.RawMessage(`{"cmd":"echo hi"}`)},
+		startErr: errors.New("db down"),
+	}
+	a := New(fs, executor.New(executor.DefaultConfig()), localaudit.New(t.TempDir()+"/a.log"), "", Options{})
+	if err := a.Register(context.Background(), "m", "darwin", "tok"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	did, err := a.RunOnce(context.Background())
+	if !did || err == nil {
+		t.Errorf("expected (true, non-nil err) on infra failure, got (%v, %v)", did, err)
 	}
 }
