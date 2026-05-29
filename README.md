@@ -53,8 +53,9 @@ ABOUTME-header check on staged Go files. See [`CONVENTIONS.md`](CONVENTIONS.md) 
 # start a throwaway Postgres for tests
 docker run --rm -e POSTGRES_PASSWORD=beacon -p 5433:5432 postgres:16
 
-# run tests (DB-backed tests skip if TEST_DATABASE_URL is unset)
-TEST_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres go test ./...
+# run tests (DB-backed tests skip if TEST_DATABASE_URL is unset).
+# DB-backed tests share one database; run the full suite with -p 1 to serialize packages.
+TEST_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres go test ./... -p 1
 
 # migrate a database and inspect state
 BEACON_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres go run ./cmd/beaconctl migrate
@@ -64,7 +65,7 @@ BEACON_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres go run ./
 ### Laptop agent (Phase 0b)
 
 ```bash
-# run the agent (migrates automatically on first run via store.Migrate)
+# registers, migrates the schema, and drains the queue
 BEACON_DATABASE_URL=<db-url> BEACON_MACHINE_TOKEN=<token> go run ./cmd/agent
 
 # optional: set a human name (defaults to hostname)

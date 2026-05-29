@@ -28,7 +28,7 @@ Laptop daemon: `cmd/agent` — registers the machine and drains its job queue (s
 ```
 You ─talk─▶ Wingman (cloud) ─MCP tool─▶ cmd/mcp ─insert queued job─▶ Supabase
                                                                        │
-                                            cmd/agent ◀─realtime/poll──┘
+                                            cmd/agent ◀──poll (0b)─────┘
                                             claims (atomic) ▶ executes ▶ writes result
                                                                        │
                             Wingman ◀─returns result─ cmd/mcp ◀─long-poll job row─┘
@@ -37,7 +37,7 @@ You ─talk─▶ Wingman (cloud) ─MCP tool─▶ cmd/mcp ─insert queued job
 1. Wingman calls an MCP tool (e.g. `run_command(machine, cmd)`).
 2. `cmd/mcp` inserts a `jobs` row, `status=queued`, scoped to the target machine.
 3. **Laptop awake?** decided by the agent's heartbeat (`machines.last_seen`).
-   - Online → agent gets the row via realtime (sub-second), claims, runs.
+   - Online → agent picks the row up on its next poll (Phase 0b; realtime push later), claims, runs.
    - Offline → row stays `queued` (until `ttl_at`); MCP returns `{job_id, status:queued}`.
 4. Agent claims atomically (`queued→claimed`), executes, writes `result` + `status=done`.
    Shell commands and file ops are implemented; screenshot/background jobs are deferred.
@@ -78,7 +78,8 @@ audit log, dual kill switch (`machines.kill_switch` + local sentinel). Detail in
   this gives atomic `FOR UPDATE SKIP LOCKED` claims and transactions.
 - **RLS deferred to Phase 4** (spec §7). Phase 0 auth = connection-string secret +
   per-machine token checked in app logic.
-- **Realtime via Postgres `LISTEN/NOTIFY`** (Phase 0b), not Supabase Realtime.
+- **Phase 0b ships pure polling** — the agent polls for claimable jobs on an interval.
+  Realtime push (Postgres `LISTEN/NOTIFY`, not Supabase Realtime) is deferred to a later phase.
 
 ### Known deferrals (later phases)
 

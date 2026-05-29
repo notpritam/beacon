@@ -52,8 +52,11 @@ green without a database). To run them, point it at any Postgres. A throwaway on
 ```bash
 docker run --rm -e POSTGRES_PASSWORD=beacon -p 5433:5432 postgres:16
 export TEST_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres
-go test ./...
+go test ./... -p 1
 ```
+
+DB-backed tests share one database; run the full suite with `-p 1` to serialize packages
+(otherwise the store package's `TRUNCATE` can collide with another package's rows).
 
 (Any local Postgres works — e.g. a Homebrew `postgresql@16` instance with a `beacon_test`
 database; set `TEST_DATABASE_URL` to its connection string.)

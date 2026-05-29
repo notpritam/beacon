@@ -50,6 +50,10 @@ func run() error {
 	}
 	defer st.Close()
 
+	if err := st.Migrate(ctx); err != nil {
+		return fmt.Errorf("migrate schema: %w", err)
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("resolve home dir: %w", err)
