@@ -3,35 +3,29 @@
 **Purpose:** The single typed gateway to Beacon's Postgres database (machines, jobs, audit).
 
 **Public surface:**
-- `Machine`, `Job`, `AuditEntry` — domain models with `json` tags matching DB column names.
-- `JobStatus`, `JobType` — string enums with `Valid()` methods.
-- `New(ctx, databaseURL) (*Store, error)` — opens and pings a `pgxpool.Pool`.
-- `(*Store).Close()` — releases the pool.
-- `(*Store).Migrate(ctx) error` — applies all embedded SQL migrations in `migrations/`
-  in lexical filename order. Migrations are idempotent (`CREATE ... IF NOT EXISTS`).
-- `ErrNotFound` — sentinel error returned when a requested row does not exist.
-- Machine ops (in `machines.go`):
-  - `(*Store).RegisterMachine(ctx, name, os, tokenHash) (Machine, error)` — upsert,
-    idempotent on the unique machine name (updates OS + token hash on conflict).
-  - `(*Store).MachineByName(ctx, name) (Machine, error)` — lookup; returns `ErrNotFound`
-    if absent.
-  - `(*Store).Heartbeat(ctx, machineID) error` — sets `last_seen = now()`; returns
-    `ErrNotFound` if the machine is unknown.
-  - `(*Store).SetKillSwitch(ctx, machineID, on) error` — sets the kill switch flag;
-    returns `ErrNotFound` if the machine is unknown.
+- Lifecycle: `New(ctx, url)`, `(*Store).Close()`, `(*Store).Migrate(ctx)`. `ErrNotFound`
+  is returned by lookups/updates when the target row does not exist.
+- Machines: `RegisterMachine` (idempotent upsert on name), `MachineByName`, `Heartbeat`,
+  `SetKillSwitch`.
+- Jobs: `EnqueueJob`, `ClaimNextJob` (atomic, returns nil when the queue is empty),
+  `StartJob`, `CompleteJob`, `FailJob`, `GetJob`, `ExpireDueJobs`.
+- Audit: `AppendAudit` (append-only), `ListAudit` (newest first).
+- Models: `Machine`, `Job`, `AuditEntry`, `JobStatus`, `JobType` (each enum has `Valid()`).
 
-**Design / flow:**
-- `store.go` owns the `Store` struct and connection lifecycle.
-- `migrate.go` embeds `migrations/*.sql` via `//go:embed` and runs them via `pool.Exec`.
-  Single `0001_init.sql` creates `machines`, `jobs`, and `audit_log` tables plus the
-  `idx_jobs_claimable` index.
-- Nullable timestamps are `*time.Time`; `payload`/`result`/`detail` are `json.RawMessage`.
+**Design / flow:** Wraps a `pgxpool.Pool`. The queue claim uses
+`FOR UPDATE SKIP LOCKED` so concurrent claimers never get the same job (verified by a
+concurrent test). Lifecycle updates (`setStatus`) and lookups map a missing row to
+`ErrNotFound`. Migrations are embedded SQL applied in filename order, idempotent via
+`IF NOT EXISTS`. Structs carry `json` tags matching the DB column names; nullable
+timestamps are `*time.Time`; `payload`/`result`/`detail` are `json.RawMessage`. RLS is not
+used in Phase 0 — the connection string is the secret and per-machine tokens are checked
+in app logic.
 
-**Depends on:** `github.com/jackc/pgx/v5/pgxpool`; stdlib `embed`, `sort`, `context`.
+**Depends on:** `github.com/jackc/pgx/v5` (+ `pgxpool`), Postgres.
 
-**Extending it:**
-- Add new SQL migrations as `0002_*.sql`, `0003_*.sql`, etc. — they run automatically
-  in filename order on the next `Migrate` call.
-- Add machine/job/audit query methods to `store.go` or new files in this package.
-- The `newTestStore` test helper in `storetest_test.go` connects, migrates, and truncates;
-  all DB-backed tests should call it and rely on its skip logic.
+**Extending it:** add a new `NNNN_*.sql` migration for schema changes; add one method per
+operation with SQL in a `const` next to it; cover every new query with a DB-backed test
+guarded by `TEST_DATABASE_URL`. Future (later phases): a `schema_migrations` version
+table and multi-file migration atomicity once a non-idempotent migration is needed; a
+lease/reaper for jobs stuck in `claimed`/`running`; state-transition validation in
+`setStatus`.
