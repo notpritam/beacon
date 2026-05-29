@@ -14,6 +14,11 @@ import (
 // ErrNotFound is returned when a requested row does not exist.
 var ErrNotFound = errors.New("not found")
 
+// maxConns caps each process's pool so several Beacon processes (agent, mcp,
+// dashboard) and tests fit within a shared/pooled Postgres connection limit —
+// e.g. Supabase's free-tier session pooler caps total clients at 15.
+const maxConns = 4
+
 // Store provides database operations for machines, jobs, and audit entries.
 type Store struct {
 	pool *pgxpool.Pool
@@ -21,7 +26,14 @@ type Store struct {
 
 // New opens a connection pool to the database at databaseURL.
 func New(ctx context.Context, databaseURL string) (*Store, error) {
-	pool, err := pgxpool.New(ctx, databaseURL)
+	cfg, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("store: parse config: %w", err)
+	}
+	if cfg.MaxConns > maxConns {
+		cfg.MaxConns = maxConns
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("store: connect: %w", err)
 	}

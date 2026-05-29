@@ -123,6 +123,29 @@ WHERE status = 'queued' AND ttl_at IS NOT NULL AND ttl_at <= now()`
 	return tag.RowsAffected(), nil
 }
 
+// RecentJobs returns the most recent jobs for a machine, newest first.
+func (s *Store) RecentJobs(ctx context.Context, machineID string, limit int) ([]Job, error) {
+	const q = `SELECT ` + jobColumns + ` FROM jobs WHERE machine_id = $1 ORDER BY created_at DESC LIMIT $2`
+	rows, err := s.pool.Query(ctx, q, machineID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("store: recent jobs: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Job
+	for rows.Next() {
+		j, err := scanJob(rows)
+		if err != nil {
+			return nil, fmt.Errorf("store: scan recent job: %w", err)
+		}
+		out = append(out, j)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: iterate recent jobs: %w", err)
+	}
+	return out, nil
+}
+
 func scanJob(r rowScanner) (Job, error) {
 	var (
 		j       Job
