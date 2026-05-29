@@ -1,5 +1,5 @@
 // ABOUTME: Tests for Executor dispatch — unsupported job types must error.
-// ABOUTME: Per-operation behavior is tested in shell_test.go and files_test.go.
+// ABOUTME: Per-operation behavior is tested in shell_test.go (file ops arrive in Task 2).
 package executor
 
 import (

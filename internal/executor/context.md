@@ -13,7 +13,10 @@
   1. Unmarshal the payload into `shellPayload{Cmd, Cwd, TimeoutSecs}`.
   2. Compute the effective timeout (payload overrides default; capped at MaxTimeout).
   3. Run `sh -c <cmd>` via `exec.CommandContext` with the derived timeout context.
-  4. On timeout (`runCtx.Err() != nil`) return a wrapped context error — this is an execution error.
+     `cmd.WaitDelay` (5s) bounds `Run()` so an orphaned grandchild holding the output
+     pipe can't hang the call after the parent is killed.
+  4. If `runCtx.Err() != nil`, distinguish timeout (`DeadlineExceeded`) from caller
+     cancellation and return the matching wrapped context error — both are execution errors.
   5. On non-zero exit (`exec.ExitError`) record the exit code in `shellResult` — NOT an error return.
   6. Marshal and return `shellResult{Stdout, Stderr, ExitCode}`.
 - Output is capped per-stream at `MaxOutputBytes` via `capString`.

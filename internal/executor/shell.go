@@ -49,10 +49,14 @@ func (e *Executor) runShell(ctx context.Context, payload json.RawMessage) (json.
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.WaitDelay = 5 * time.Second
 
 	runErr := cmd.Run()
 	if runCtx.Err() != nil {
-		return nil, fmt.Errorf("executor: shell timed out after %s: %w", timeout, runCtx.Err())
+		if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+			return nil, fmt.Errorf("executor: shell timed out after %s: %w", timeout, runCtx.Err())
+		}
+		return nil, fmt.Errorf("executor: shell cancelled: %w", runCtx.Err())
 	}
 
 	res := shellResult{
@@ -75,6 +79,7 @@ func (e *Executor) runShell(ctx context.Context, payload json.RawMessage) (json.
 }
 
 // capString truncates s to at most maxBytes bytes (maxBytes <= 0 means no limit).
+// The cut may fall mid-rune; callers needing valid UTF-8 should re-validate.
 func capString(s string, maxBytes int) string {
 	if maxBytes > 0 && len(s) > maxBytes {
 		return s[:maxBytes]

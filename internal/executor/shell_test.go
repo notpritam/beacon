@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -78,7 +79,11 @@ func TestShellEmptyCmd(t *testing.T) {
 func TestShellTimeout(t *testing.T) {
 	e := New(DefaultConfig())
 	job := store.Job{Type: store.JobShell, Payload: json.RawMessage(`{"cmd":"sleep 5","timeout_secs":1}`)}
-	if _, err := e.Execute(context.Background(), job); err == nil {
-		t.Error("expected timeout error")
+	_, err := e.Execute(context.Background(), job)
+	if err == nil {
+		t.Fatal("expected timeout error")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected DeadlineExceeded, got %v", err)
 	}
 }
