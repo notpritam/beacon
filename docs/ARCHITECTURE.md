@@ -58,8 +58,8 @@ Three tables:
 - **`jobs`** — the durable queue: status, payload, result, TTL, claimed/completed timestamps.
 - **`audit_log`** — append-only record of every status transition and action.
 
-One index: **`idx_jobs_claimable`** on `(machine_name, status, created_at)`, used by
-the `FOR UPDATE SKIP LOCKED` claim path.
+One index: **`idx_jobs_claimable`** on `(machine_id, status, priority DESC, created_at)`,
+used by the `FOR UPDATE SKIP LOCKED` claim path.
 
 A Storage bucket for large output/screenshots is deferred to a later phase.
 

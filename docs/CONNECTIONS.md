@@ -21,7 +21,7 @@ Configured via env (loaded by `internal/config`; never hardcoded, never committe
 
 - `BEACON_DATABASE_URL` — **(required)** Postgres connection string (your Supabase DB URL
   or local Postgres). Everything fails without this.
-- `BEACON_MACHINE_NAME` — human label for this machine (optional; defaults to hostname).
+- `BEACON_MACHINE_NAME` — human label for this machine (optional in Phase 0a; empty if unset).
 - `BEACON_MACHINE_TOKEN` — per-machine token the agent presents (optional in Phase 0a;
   required when RLS / token checking is enforced in Phase 4).
 
