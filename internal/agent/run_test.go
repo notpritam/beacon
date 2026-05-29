@@ -8,6 +8,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/notpritam/beacon/internal/executor"
 	"github.com/notpritam/beacon/internal/localaudit"
@@ -146,5 +147,46 @@ func TestRunOnceInfraErrorPropagates(t *testing.T) {
 	did, err := a.RunOnce(context.Background())
 	if !did || err == nil {
 		t.Errorf("expected (true, non-nil err) on infra failure, got (%v, %v)", did, err)
+	}
+}
+
+func TestRunProcessesThenStops(t *testing.T) {
+	st := newAgentStore(t)
+	a, mid := registeredAgent(t, st)
+	ctx := context.Background()
+	j, err := st.EnqueueJob(ctx, mid, store.JobShell, json.RawMessage(`{"cmd":"echo hi"}`), 0, nil, "test")
+	if err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+
+	runCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	if err := a.Run(runCtx); err == nil || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Run should return the context error, got %v", err)
+	}
+
+	got, err := st.GetJob(ctx, j.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.Status != store.JobDone {
+		t.Errorf("status = %q, want done", got.Status)
+	}
+	var res struct {
+		Stdout string `json:"stdout"`
+	}
+	if err := json.Unmarshal(got.Result, &res); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if res.Stdout == "" {
+		t.Error("expected stdout in result")
+	}
+
+	m, err := st.MachineByName(ctx, t.Name())
+	if err != nil {
+		t.Fatalf("lookup: %v", err)
+	}
+	if m.LastSeen == nil {
+		t.Error("Run should have heartbeated (last_seen set)")
 	}
 }
