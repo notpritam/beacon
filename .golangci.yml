@@ -1,0 +1,20 @@
+# Beacon golangci-lint config — a sensible, strict-but-not-noisy baseline.
+run:
+  timeout: 3m
+
+linters:
+  enable:
+    - errcheck      # unchecked errors
+    - govet         # suspicious constructs
+    - staticcheck   # the big one: correctness + simplification
+    - ineffassign   # ineffective assignments
+    - unused        # dead code
+    - misspell      # typos in comments/strings
+    - gofmt         # formatting
+    - revive        # style/lint (replacement for golint)
+    - bodyclose     # http response bodies closed
+    - gosec         # security issues (important for a remote-control tool)
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

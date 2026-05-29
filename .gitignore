@@ -1,0 +1,27 @@
+# Secrets / config
+.env
+.env.*
+!.env.example
+*.local
+
+# Build output
+/bin/
+/dist/
+beacon-agent
+beacon-mcp
+*.exe
+
+# Go
+*.test
+*.out
+coverage.*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local runtime state (agent audit mirror, sentinels)
+/.beacon/
+*.log

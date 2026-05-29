@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# ABOUTME: Pre-commit gate — runs gofmt, go vet, golangci-lint, build, test, and the
+# ABOUTME: ABOUTME-header check on staged Go files. Blocks the commit on any failure.
+
+if [ -z "$BASH_VERSION" ]; then exec bash "$0" "$@"; fi
+set -o pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT" || exit 1
+
+# Staged Go files (Added/Copied/Modified/Renamed). Built without mapfile so it works
+# on macOS's bash 3.2.
+GO_FILES=()
+while IFS= read -r _line; do
+  [ -n "$_line" ] && GO_FILES+=("$_line")
+done < <(git diff --cached --name-only --diff-filter=ACMR | grep '\.go$' || true)
+
+if [ "${#GO_FILES[@]}" -eq 0 ]; then
+  exit 0   # no Go changes — nothing to gate
+fi
+
+fail=0
+note() { printf '\n\033[1;31m✗ %s\033[0m\n' "$1"; fail=1; }
+
+# 1. ABOUTME headers
+if [ -x scripts/check-aboutme.sh ]; then
+  if ! scripts/check-aboutme.sh "${GO_FILES[@]}"; then
+    note "ABOUTME header check failed (every .go file needs two // ABOUTME: lines)"
+  fi
+fi
+
+# 2. gofmt — staged files must be formatted
+unformatted="$(gofmt -l "${GO_FILES[@]}" 2>/dev/null)"
+if [ -n "$unformatted" ]; then
+  note "gofmt: these files are not formatted — run 'gofmt -w':"
+  echo "$unformatted"
+fi
+
+# 3. go vet
+if ! go vet ./... ; then
+  note "go vet reported issues"
+fi
+
+# 4. golangci-lint (required when Go changes; install per README)
+if command -v golangci-lint >/dev/null 2>&1; then
+  if ! golangci-lint run ; then
+    note "golangci-lint reported issues"
+  fi
+else
+  note "golangci-lint not installed — install it (see README) before committing Go changes"
+fi
+
+# 5. build
+if ! go build ./... ; then
+  note "go build failed"
+fi
+
+# 6. test
+if ! go test ./... ; then
+  note "go test failed"
+fi
+
+if [ "$fail" -ne 0 ]; then
+  printf '\n\033[1;31mCommit blocked: fix the issues above (do NOT use --no-verify).\033[0m\n'
+  exit 1
+fi
+exit 0
