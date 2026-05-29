@@ -90,3 +90,8 @@ audit log, dual kill switch (`machines.kill_switch` + local sentinel). Detail in
 - State-transition validation in `setStatus` (currently any status→any status), to land
   with the agent execution loop.
 - Indexes on `audit_log(job_id, machine_id)` if/when audit is queried by those.
+- Heartbeat during a long job: execution is synchronous, so a job running longer than the
+  heartbeat interval delays the next heartbeat (the machine can look briefly stale). A
+  background-goroutine heartbeat would decouple this.
+- The kill switch is a **pre-claim gate** (checked before claiming a job); it does not
+  abort an already-running job. Mid-job abort would come with the reaper/lease work.

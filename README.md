@@ -6,7 +6,7 @@ Beacon is an all-Go system that lets a cloud agent (**Wingman**) run shell comma
 read/write files, run background jobs, and take screenshots on your laptop through
 **MCP tools** — routed via a **durable queue** so commands issued while the laptop is
 offline are parked and run automatically on wake. Every action is audit-logged, and a
-dual kill switch can halt the agent instantly.
+dual kill switch (cloud flag + local sentinel) stops the agent from claiming new jobs.
 
 > **Note:** *Beacon* is the project. *Wingman* is the cloud agent that uses it.
 
