@@ -40,7 +40,11 @@ func (t *Tools) enqueueAndWait(ctx context.Context, m store.Machine, jobType sto
 			return JobOutcome{}, fmt.Errorf("mcptools: poll job: %w", err)
 		}
 		if terminal(got.Status) {
-			return JobOutcome{JobID: job.ID, Status: string(got.Status), MachineOnline: true, Result: got.Result}, nil
+			result, err := decodeResult(got.Result)
+			if err != nil {
+				return JobOutcome{}, err
+			}
+			return JobOutcome{JobID: job.ID, Status: string(got.Status), MachineOnline: true, Result: result}, nil
 		}
 		if time.Now().After(deadline) {
 			return JobOutcome{JobID: job.ID, Status: string(got.Status), MachineOnline: true}, nil

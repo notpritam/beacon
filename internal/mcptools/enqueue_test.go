@@ -66,14 +66,12 @@ func TestRunCommandOnlineCompletes(t *testing.T) {
 	if !out.MachineOnline || out.Status != string(store.JobDone) {
 		t.Fatalf("expected online+done, got %+v", out)
 	}
-	var res struct {
-		Stdout string `json:"stdout"`
+	obj, ok := out.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("result is not an object: %T", out.Result)
 	}
-	if err := json.Unmarshal(out.Result, &res); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-	if res.Stdout == "" {
-		t.Error("expected stdout in result")
+	if stdout, _ := obj["stdout"].(string); stdout == "" {
+		t.Errorf("expected stdout in result, got %v", obj)
 	}
 }
 

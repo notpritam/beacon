@@ -66,8 +66,24 @@ type JobOutcome struct {
 	Status string `json:"status"`
 	// MachineOnline is set by enqueueAndWait (it reflects online state at enqueue time).
 	// GetJob does not have machine context, so it always leaves this field false.
-	MachineOnline bool            `json:"machine_online"`
-	Result        json.RawMessage `json:"result,omitempty"`
+	MachineOnline bool `json:"machine_online"`
+	// Result is the job's decoded result (an object such as {stdout,stderr,exit_code}
+	// for shell, {content} for read_file, etc.), or nil if there is none yet. It is
+	// decoded (not raw bytes) so the MCP tool output schema is object-shaped.
+	Result any `json:"result,omitempty"`
+}
+
+// decodeResult turns a raw JSON job result into a decoded value (object/array/etc.),
+// or nil when there is no result. Returned through MCP as structured output.
+func decodeResult(raw json.RawMessage) (any, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil, fmt.Errorf("mcptools: decode result: %w", err)
+	}
+	return v, nil
 }
 
 func (t *Tools) online(m store.Machine) bool {
@@ -109,5 +125,9 @@ func (t *Tools) GetJob(ctx context.Context, jobID string) (JobOutcome, error) {
 	if err != nil {
 		return JobOutcome{}, fmt.Errorf("mcptools: get job: %w", err)
 	}
-	return JobOutcome{JobID: j.ID, Status: string(j.Status), Result: j.Result}, nil
+	result, err := decodeResult(j.Result)
+	if err != nil {
+		return JobOutcome{}, err
+	}
+	return JobOutcome{JobID: j.ID, Status: string(j.Status), Result: result}, nil
 }
