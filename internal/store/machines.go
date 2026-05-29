@@ -95,6 +95,21 @@ func (s *Store) ListMachines(ctx context.Context) ([]Machine, error) {
 	return out, nil
 }
 
+// MachineKillSwitch reports whether the machine's kill switch is engaged, or
+// ErrNotFound if the machine does not exist.
+func (s *Store) MachineKillSwitch(ctx context.Context, machineID string) (bool, error) {
+	const q = `SELECT kill_switch FROM machines WHERE id = $1`
+	var on bool
+	err := s.pool.QueryRow(ctx, q, machineID).Scan(&on)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, fmt.Errorf("store: machine %s: %w", machineID, ErrNotFound)
+	}
+	if err != nil {
+		return false, fmt.Errorf("store: kill switch: %w", err)
+	}
+	return on, nil
+}
+
 func scanMachine(r rowScanner) (Machine, error) {
 	var m Machine
 	if err := r.Scan(&m.ID, &m.Name, &m.OS, &m.TokenHash, &m.LastSeen, &m.KillSwitch, &m.CreatedAt); err != nil {

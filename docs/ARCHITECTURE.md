@@ -3,7 +3,7 @@
 This is the canonical doc for how Beacon is **built** and how a command flows
 end-to-end. It is updated in the same commit as the code it describes.
 
-> Status: Phase 0 (MVP) — scaffolding. Sections marked _(pending)_ fill in as code lands.
+> Status: Phase 0b — laptop agent implemented and running. The agent claims, executes, and reports jobs (polling; screenshot/background deferred to later phases).
 
 ## Components
 
@@ -16,17 +16,19 @@ end-to-end. It is updated in the same commit as the code it describes.
 Internal slices (each has its own `context.md`):
 
 - **Implemented (Phase 0a):** `internal/config`, `internal/store`
-- **Pending (later phases):** `internal/queue`, `internal/executor`, `internal/audit`,
-  `internal/killswitch`, `internal/mcptools`
+- **Implemented (Phase 0b):** `internal/executor`, `internal/killswitch`, `internal/localaudit`, `internal/agent`
+- **Pending (later phases):** `internal/queue`, `internal/mcptools`
 
 Admin/debug CLI: `cmd/beaconctl` — `migrate`, `machines`, `enqueue <machine> <cmd>`, `get <job-id>`.
+
+Laptop daemon: `cmd/agent` — registers the machine and drains its job queue (shell + file ops); clean shutdown on SIGINT/SIGTERM.
 
 ## End-to-end flow
 
 ```
 You ─talk─▶ Wingman (cloud) ─MCP tool─▶ cmd/mcp ─insert queued job─▶ Supabase
                                                                        │
-                                            cmd/agent ◀─realtime/poll──┘
+                                            cmd/agent ◀──poll (0b)─────┘
                                             claims (atomic) ▶ executes ▶ writes result
                                                                        │
                             Wingman ◀─returns result─ cmd/mcp ◀─long-poll job row─┘
@@ -35,9 +37,10 @@ You ─talk─▶ Wingman (cloud) ─MCP tool─▶ cmd/mcp ─insert queued job
 1. Wingman calls an MCP tool (e.g. `run_command(machine, cmd)`).
 2. `cmd/mcp` inserts a `jobs` row, `status=queued`, scoped to the target machine.
 3. **Laptop awake?** decided by the agent's heartbeat (`machines.last_seen`).
-   - Online → agent gets the row via realtime (sub-second), claims, runs.
+   - Online → agent picks the row up on its next poll (Phase 0b; realtime push later), claims, runs.
    - Offline → row stays `queued` (until `ttl_at`); MCP returns `{job_id, status:queued}`.
 4. Agent claims atomically (`queued→claimed`), executes, writes `result` + `status=done`.
+   Shell commands and file ops are implemented; screenshot/background jobs are deferred.
 5. `cmd/mcp` long-polls the row and returns the result to Wingman.
 
 ## Job lifecycle
@@ -75,7 +78,8 @@ audit log, dual kill switch (`machines.kill_switch` + local sentinel). Detail in
   this gives atomic `FOR UPDATE SKIP LOCKED` claims and transactions.
 - **RLS deferred to Phase 4** (spec §7). Phase 0 auth = connection-string secret +
   per-machine token checked in app logic.
-- **Realtime via Postgres `LISTEN/NOTIFY`** (Phase 0b), not Supabase Realtime.
+- **Phase 0b ships pure polling** — the agent polls for claimable jobs on an interval.
+  Realtime push (Postgres `LISTEN/NOTIFY`, not Supabase Realtime) is deferred to a later phase.
 
 ### Known deferrals (later phases)
 
@@ -86,3 +90,8 @@ audit log, dual kill switch (`machines.kill_switch` + local sentinel). Detail in
 - State-transition validation in `setStatus` (currently any status→any status), to land
   with the agent execution loop.
 - Indexes on `audit_log(job_id, machine_id)` if/when audit is queried by those.
+- Heartbeat during a long job: execution is synchronous, so a job running longer than the
+  heartbeat interval delays the next heartbeat (the machine can look briefly stale). A
+  background-goroutine heartbeat would decouple this.
+- The kill switch is a **pre-claim gate** (checked before claiming a job); it does not
+  abort an already-running job. Mid-job abort would come with the reaper/lease work.
