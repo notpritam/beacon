@@ -24,9 +24,10 @@ Full design and flow: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Status
 
-Phase 0a (data layer) complete: config, pgx-backed store with atomic-claim queue,
-migrations, audit log, kill switch, and the `beaconctl` admin CLI are all implemented.
-The laptop agent (`cmd/agent`) and MCP server (`cmd/mcp`) are next (Phase 0b+).
+Phase 0b complete: the laptop agent (`cmd/agent`) now drains the queue — it registers
+the machine, polls for jobs, executes shell commands and file ops, reports results, and
+stops cleanly on SIGINT/SIGTERM. The local audit mirror and dual kill switch are wired in.
+The MCP server (`cmd/mcp`) is next (Phase 0c+).
 Roadmap (background jobs → dashboard → interactive computer-use → fleet)
 is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
@@ -59,6 +60,19 @@ TEST_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres go test ./.
 BEACON_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres go run ./cmd/beaconctl migrate
 BEACON_DATABASE_URL=postgres://postgres:beacon@localhost:5433/postgres go run ./cmd/beaconctl machines
 ```
+
+### Laptop agent (Phase 0b)
+
+```bash
+# run the agent (migrates automatically on first run via store.Migrate)
+BEACON_DATABASE_URL=<db-url> BEACON_MACHINE_TOKEN=<token> go run ./cmd/agent
+
+# optional: set a human name (defaults to hostname)
+BEACON_DATABASE_URL=<db-url> BEACON_MACHINE_NAME=my-laptop BEACON_MACHINE_TOKEN=<token> go run ./cmd/agent
+```
+
+State files are written to `~/.beacon/`: `audit.log` (local append-only mirror) and
+`killswitch` (create/touch to hard-stop the agent without a signal).
 
 ## License
 

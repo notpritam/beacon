@@ -3,7 +3,7 @@
 This is the canonical doc for how Beacon is **built** and how a command flows
 end-to-end. It is updated in the same commit as the code it describes.
 
-> Status: Phase 0 (MVP) — scaffolding. Sections marked _(pending)_ fill in as code lands.
+> Status: Phase 0b — laptop agent implemented and running. The agent claims, executes, and reports jobs (polling; screenshot/background deferred to later phases).
 
 ## Components
 
@@ -16,10 +16,12 @@ end-to-end. It is updated in the same commit as the code it describes.
 Internal slices (each has its own `context.md`):
 
 - **Implemented (Phase 0a):** `internal/config`, `internal/store`
-- **Pending (later phases):** `internal/queue`, `internal/executor`, `internal/audit`,
-  `internal/killswitch`, `internal/mcptools`
+- **Implemented (Phase 0b):** `internal/executor`, `internal/killswitch`, `internal/localaudit`, `internal/agent`
+- **Pending (later phases):** `internal/queue`, `internal/mcptools`
 
 Admin/debug CLI: `cmd/beaconctl` — `migrate`, `machines`, `enqueue <machine> <cmd>`, `get <job-id>`.
+
+Laptop daemon: `cmd/agent` — registers the machine and drains its job queue (shell + file ops); clean shutdown on SIGINT/SIGTERM.
 
 ## End-to-end flow
 
@@ -38,6 +40,7 @@ You ─talk─▶ Wingman (cloud) ─MCP tool─▶ cmd/mcp ─insert queued job
    - Online → agent gets the row via realtime (sub-second), claims, runs.
    - Offline → row stays `queued` (until `ttl_at`); MCP returns `{job_id, status:queued}`.
 4. Agent claims atomically (`queued→claimed`), executes, writes `result` + `status=done`.
+   Shell commands and file ops are implemented; screenshot/background jobs are deferred.
 5. `cmd/mcp` long-polls the row and returns the result to Wingman.
 
 ## Job lifecycle
