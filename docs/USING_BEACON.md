@@ -52,8 +52,15 @@ whether each is **online** (heartbeating). If a machine is offline, action tools
 | `read_file` | `machine`, `path` | `JobOutcome` (result `{content}`) |
 | `write_file` | `machine`, `path`, `content` | `JobOutcome` (result `{bytes_written}`) |
 | `list_dir` | `machine`, `path` | `JobOutcome` (result `{entries:[{name,is_dir,size}]}`) |
-| `screenshot` | `machine` | `JobOutcome` (result `{format:"jpeg", bytes, base64}`) — macOS only |
+| `screenshot` | `machine` | `JobOutcome` (result `{format:"jpeg", width, height, base64}`) — macOS only |
+| `gui` | `machine`, `action`, `…` | `JobOutcome` (result `{ok:true}` or action data) — macOS computer-use |
 | `get_job` | `job_id` | `JobOutcome` |
+
+**`gui` actions** (macOS): `screen_size`, `move{x,y}`, `click{x,y,button?,double?}`,
+`type{text}`, `key{key}`, `hotkey{combo}`, `open_app{app}` / `activate_app` / `quit_app`,
+`list_apps`. To click something seen in a `screenshot`, scale image pixels to screen
+coordinates: `x = ix * screen.width / shot.width` (get `screen.*` from `gui screen_size`,
+`shot.*` from the screenshot's `width`/`height`).
 
 **`JobOutcome`** = `{ job_id, status, machine_online, result }`. `status` is one of
 `queued` / `claimed` / `running` / `done` / `failed` / `expired`. When the machine is
@@ -90,6 +97,11 @@ Response (`result.structuredContent`):
   carries an `error`.
 - For long or offline work, expect `status:"queued"`/`"running"` and poll `get_job`.
 - `screenshot` (macOS) returns a base64-encoded JPEG in `result.base64` — decode it to view.
+- `gui` (macOS) gives full computer-use: move/click, type, hotkeys, open/quit/list apps.
+  Loop: `screenshot` → find target → `gui` click/type → `screenshot` again to confirm.
+- A token-gated **live dashboard** (agent-served, off by default) lets the *human* watch
+  the screen in a browser. You can't open it; tell the human to open its URL when watching
+  helps. It does not replace `screenshot` — you still screenshot to see and decide.
 - Background/long-running jobs are **not available yet**.
 
 ## Safety

@@ -13,6 +13,8 @@ error if a required variable (currently `BEACON_DATABASE_URL`) is missing.
 | `MachineToken` | `BEACON_MACHINE_TOKEN` | no | `""` | Per-machine auth secret |
 | `WingmanToken` | `BEACON_WINGMAN_TOKEN` | no | `""` | Bearer token MCP server requires from callers |
 | `MCPAddr` | `BEACON_MCP_ADDR` | no | `":8080"` | MCP server listen address |
+| `DashboardToken` | `BEACON_DASHBOARD_TOKEN` | no | `""` | Token gating the live-view dashboard; empty disables it |
+| `DashboardAddr` | `BEACON_DASHBOARD_ADDR` | no | `":8081"` | Dashboard listen address (used only when a token is set) |
 
 **Design / flow:** Pure function over `os.Getenv`; no I/O beyond env reads. Each binary
 calls `Load` once at startup and passes `Config` down explicitly (no globals).

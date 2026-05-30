@@ -3,7 +3,7 @@
 This is the canonical doc for how Beacon is **built** and how a command flows
 end-to-end. It is updated in the same commit as the code it describes.
 
-> Status: Phase 0c — MCP server implemented. Wingman can call all 8 tools over streamable HTTP with bearer auth. The laptop agent claims, executes, and reports jobs (polling; screenshot supported on macOS, background jobs deferred).
+> Status: Computer-use live end-to-end. Wingman can call all **9 tools** over streamable HTTP with bearer auth. The laptop agent claims, executes, and reports jobs (polling) — shell, file ops, screenshot, and `gui` computer-use (macOS); background jobs deferred. An optional token-gated live-view dashboard streams the screen to a browser on demand.
 
 ## Components
 
@@ -17,14 +17,17 @@ Internal slices (each has its own `context.md`):
 
 - **Implemented (Phase 0a):** `internal/config`, `internal/store`
 - **Implemented (Phase 0b):** `internal/executor`, `internal/killswitch`, `internal/localaudit`, `internal/agent`
-- **Implemented (Phase 0c):** `internal/mcptools`, `cmd/mcp` — 8 tools over streamable HTTP with bearer auth (screenshot macOS-only; background jobs deferred)
+- **Implemented (Phase 0c):** `internal/mcptools`, `cmd/mcp` — 9 tools over streamable HTTP with bearer auth (screenshot + `gui` computer-use macOS-only; background jobs deferred)
+- **Implemented (live view):** `internal/dashboard` — opt-in, token-gated, on-demand MJPEG screen stream + jobs feed, served by `cmd/agent`
 - **Pending (later phases):** `internal/queue`
 
 Admin/debug CLI: `cmd/beaconctl` — `migrate`, `machines`, `enqueue <machine> <cmd>`, `get <job-id>`.
 
-Laptop daemon: `cmd/agent` — registers the machine and drains its job queue (shell + file ops); clean shutdown on SIGINT/SIGTERM.
+Laptop daemon: `cmd/agent` — registers the machine and drains its job queue (shell, file ops, screenshot, `gui` computer-use); optionally serves the live-view dashboard; clean shutdown on SIGINT/SIGTERM.
 
-MCP server: `cmd/mcp` — serves the 7 Beacon tools over streamable HTTP at `/mcp`; requires `Authorization: Bearer <BEACON_WINGMAN_TOKEN>` on every request.
+MCP server: `cmd/mcp` — serves the 9 Beacon tools over streamable HTTP at `/mcp`; requires `Authorization: Bearer <BEACON_WINGMAN_TOKEN>` on every request.
+
+Live-view dashboard: `internal/dashboard` — served by `cmd/agent` when `BEACON_DASHBOARD_TOKEN` is set. Token-gated routes `/` (page), `/live` (MJPEG stream), `/jobs` (feed). Capture is per-request, so the screen is only grabbed while a viewer is connected. Observation only — it does not replace the `screenshot` job the agent uses to see the screen.
 
 ## End-to-end flow
 
@@ -43,7 +46,8 @@ You ─talk─▶ Wingman (cloud) ─MCP tool─▶ cmd/mcp ─insert queued job
    - Online → agent picks the row up on its next poll (Phase 0b; realtime push later), claims, runs.
    - Offline → row stays `queued` (until `ttl_at`); MCP returns `{job_id, status:queued}`.
 4. Agent claims atomically (`queued→claimed`), executes, writes `result` + `status=done`.
-   Shell, file ops, and screenshot (macOS) are implemented; background jobs are deferred.
+   Shell, file ops, screenshot, and `gui` computer-use (macOS) are implemented; background
+   jobs are deferred.
 5. `cmd/mcp` long-polls the row and returns the result to Wingman.
 
 ## Job lifecycle
